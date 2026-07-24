@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreBancario.Dominio\CoreBancario.Dominio.csproj" />
+  </ItemGroup>
+
+</Project>
