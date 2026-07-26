@@ -21,6 +21,7 @@ public static class GeradorDeMassaDeDados
         await ExecutarAsync(conexao, "TRUNCATE lancamentos;", cancellationToken);
         await ExecutarAsync(conexao, "DROP INDEX IF EXISTS ix_lancamentos_extrato;", cancellationToken);
         await ExecutarAsync(conexao, "DROP INDEX IF EXISTS ux_lancamentos_idempotencia;", cancellationToken);
+        await ExecutarAsync(conexao, "DROP INDEX IF EXISTS ix_lancamentos_contraparte;", cancellationToken);
 
         log.LogInformation("Gerando contas, pareando liquidações e inserindo 1.200.000 lançamentos...");
         await ExecutarAsync(conexao, ScriptDeGeracao, cancellationToken);
@@ -37,6 +38,14 @@ public static class GeradorDeMassaDeDados
         await ExecutarAsync(
             conexao,
             "CREATE UNIQUE INDEX ux_lancamentos_idempotencia ON lancamentos (liquidacao_id, conta_id);",
+            cancellationToken);
+        await ExecutarAsync(
+            conexao,
+            """
+            CREATE INDEX ix_lancamentos_contraparte
+                ON lancamentos (contraparte_id)
+                INCLUDE (contraparte_nome);
+            """,
             cancellationToken);
 
         log.LogInformation("Atualizando estatísticas do planejador (ANALYZE)...");
