@@ -371,6 +371,7 @@ docs/
 openspec/
 .claude/
 .claudeignore
+CLAUDE.md
 /plans/
 
 # Private keys and certificates
