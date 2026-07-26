@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="CoreBancario.Api/CoreBancario.Api.csproj" />
+  <Project Path="CoreBancario.Aplicacao/CoreBancario.Aplicacao.csproj" />
+  <Project Path="CoreBancario.Dominio/CoreBancario.Dominio.csproj" />
+  <Project Path="CoreBancario.Infraestrutura/CoreBancario.Infraestrutura.csproj" />
+  <Project Path="CoreBancario.Testes.Integracao/CoreBancario.Testes.Integracao.csproj" />
+  <Project Path="CoreBancario.Testes.Unidade/CoreBancario.Testes.Unidade.csproj" />
+  <Project Path="CoreBancario.Worker/CoreBancario.Worker.csproj" />
+</Solution>

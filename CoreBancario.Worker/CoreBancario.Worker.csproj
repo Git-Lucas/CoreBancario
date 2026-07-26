@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-CoreBancario.Worker-98f57c75-6926-4fe7-a904-ed53edea6aa9</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreBancario.Aplicacao\CoreBancario.Aplicacao.csproj" />
+    <ProjectReference Include="..\CoreBancario.Infraestrutura\CoreBancario.Infraestrutura.csproj" />
+  </ItemGroup>
+
+</Project>
