@@ -1,5 +1,5 @@
-# Exceção deliberada ao tratamento das demais credenciais do cluster (design.md, D13): aquelas
-# são versionadas porque são as mesmas credenciais de desenvolvimento que o docker-compose.yml já
+# Exceção deliberada ao tratamento das demais credenciais do cluster: aquelas são versionadas
+# porque são as mesmas credenciais de desenvolvimento que o docker-compose.yml já
 # expõe em texto claro. Um token de acesso a um tenant Dynatrace real não compartilha essa
 # propriedade — os valores abaixo são apenas o formato esperado. O valor real é aplicado fora do
 # repositório (`kubectl apply -f -` com o Secret editado localmente, ou `kubectl create secret

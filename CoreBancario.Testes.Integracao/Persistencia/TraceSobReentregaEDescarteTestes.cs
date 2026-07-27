@@ -9,8 +9,8 @@ using RabbitMQ.Client;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// D5 chama a sobrevivência do trace à reentrega e ao descarte de "o principal ganho" da mudança
-/// — é o que torna "morta na fila de descartes" legível sem endpoint de status (PRD-2, D2).
+/// A sobrevivência do trace à reentrega e ao descarte é o principal ganho desta mudança — é o
+/// que torna "morta na fila de descartes" legível sem endpoint de status.
 /// Reproduz, contra o broker real, a sequência que <c>ConsumidorDeTransferencias</c> e
 /// <c>ConsumidorDeDescartes</c> fazem a cada entrega: extrair do cabeçalho e abrir span a partir
 /// do contexto extraído — nunca do contexto ambiente.

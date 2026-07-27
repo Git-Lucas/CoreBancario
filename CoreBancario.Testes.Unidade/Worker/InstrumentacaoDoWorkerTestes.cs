@@ -4,9 +4,9 @@ using CoreBancario.Worker;
 namespace CoreBancario.Testes.Unidade.Worker;
 
 /// <summary>
-/// Task 4.3: a reentrega absorvida por idempotência precisa incrementar o desfecho próprio
+/// A reentrega absorvida por idempotência precisa incrementar o desfecho próprio
 /// (<see cref="Desfechos.JaLiquidada"/>), não <see cref="Desfechos.Liquidada"/> — contá-la como
-/// liquidação nova inflaria a taxa com trabalho que não aconteceu (design.md, D7).
+/// liquidação nova inflaria a taxa com trabalho que não aconteceu.
 /// </summary>
 public class InstrumentacaoDoWorkerTestes
 {

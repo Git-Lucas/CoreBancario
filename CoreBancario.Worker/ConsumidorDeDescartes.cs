@@ -37,13 +37,13 @@ public sealed class ConsumidorDeDescartes(IConnection conexao, ILogger<Consumido
     {
         // liquidacao_id lido do envelope (MessageId), nunca do corpo — é exatamente aqui que um
         // corpo corrompido não pode impedir a identificação. O trace acrescenta informação, não
-        // substitui essa correlação (design.md, D5/D9).
+        // substitui essa correlação.
         var liquidacaoId = ea.BasicProperties.MessageId ?? "(sem MessageId)";
         using var escopoDeLog = log.BeginScope(new Dictionary<string, object> { ["LiquidacaoId"] = liquidacaoId });
 
         // Mesmo contexto de trace da transferência: sobrevive à reentrega e ao roteamento para a
         // DLQ, porque viaja no cabeçalho, não no corpo — o descarte cai no trace da transferência
-        // em vez de virar um evento solto (design.md, D5).
+        // em vez de virar um evento solto.
         var contextoExtraido = RabbitMQActivitySource.ContextExtractor(ea.BasicProperties);
         using var atividade = InstrumentacaoDoWorker.ActivitySource.StartActivity(
             "RegistrarDescarte", ActivityKind.Internal, contextoExtraido);

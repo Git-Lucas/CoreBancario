@@ -11,6 +11,6 @@ data:
   POSTGRES_DB: "corebancario"
   POSTGRES_USER: "corebancario"
   RABBITMQ_DEFAULT_USER: "corebancario"
-  # Endereço do coletor no cluster (task 6.3) — API e Worker conhecem só isto, nunca um backend
-  # específico (design.md, D2). Variável padrão do OTel SDK: nenhum código lê este nome.
+  # Endereço do coletor no cluster — API e Worker conhecem só isto, nunca um backend
+  # específico. Variável padrão do OTel SDK: nenhum código lê este nome.
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-lgtm:4317"

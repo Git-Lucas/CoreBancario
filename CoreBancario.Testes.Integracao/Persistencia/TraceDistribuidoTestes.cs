@@ -13,8 +13,8 @@ using RabbitMQ.Client;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Teste narrow que comprova exatamente o mecanismo que sustenta o trace distribuído (design.md,
-/// D14): a instrumentação oficial do cliente injeta o contexto no cabeçalho da publicação e o
+/// Teste narrow que comprova exatamente o mecanismo que sustenta o trace distribuído: a
+/// instrumentação oficial do cliente injeta o contexto no cabeçalho da publicação e o
 /// extrai no consumo. Não exercita o Worker nem abre span de processamento — isso é o span de
 /// `RabbitMQ.Client.Publisher`/`RabbitMQ.Client.Subscriber` da própria biblioteca. Se essa camada
 /// quebrar, o span de processamento (encadeado a partir do mesmo `ContextExtractor`) quebra junto.

@@ -1,7 +1,7 @@
-# Cópia da configuração base do coletor embutido na imagem (D1), com um único acréscimo: o alvo
-# de raspagem do RabbitMQ no bloco `prometheus/collector` que a imagem já declara para as próprias
-# métricas internas — sem receptor novo (design.md da change add-observability, D3). Overlay, não
-# reescrita: sobrescrever esta cópia é o custo aceito em D3, mitigado pela tag fixa da imagem (D1).
+# Cópia da configuração base do coletor embutido na imagem, com um único acréscimo: o alvo de
+# raspagem do RabbitMQ no bloco `prometheus/collector` que a imagem já declara para as próprias
+# métricas internas — sem receptor novo. Overlay, não reescrita: sobrescrever esta cópia a cada
+# atualização da imagem é o custo aceito, mitigado por fixar a tag da imagem numa versão conhecida.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -120,10 +120,9 @@ data:
           path: /otel-lgtm/corebancario-dashboard.json
           foldersFromFilesStructure: false
 ---
-# Painel desta mudança (tasks 7.1-7.3): RED da API e do processamento assíncrono, com o desfecho
-# visível, mais a profundidade da fila de transferências. Nenhum indicador declara limiar
-# numérico de latência ou de erro (task 7.4) — sem tráfego de produção e sem linha de base, um
-# limiar seria inventado (design.md, D10).
+# Painel desta mudança: RED da API e do processamento assíncrono, com o desfecho visível, mais
+# a profundidade da fila de transferências. Nenhum indicador declara limiar numérico de latência
+# ou de erro — sem tráfego de produção e sem linha de base, um limiar seria inventado.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -308,14 +307,14 @@ data:
       ]
     }
 ---
-# Backend único de observabilidade (design.md, D1): imagem que já reúne coletor, Tempo (traces),
-# Prometheus (métricas) e Grafana (painel) — Loki e Pyroscope sobem junto, fora do escopo do
-# PRD-4, e não há como desligá-los sem sobrescrever o ponto de entrada da imagem. Deployment sem
-# PVC: o backend é descartável por desenho (design.md, Context) — perder o histórico num restart
-# não é um requisito que este projeto sustenta.
+# Backend único de observabilidade: imagem que já reúne coletor, Tempo (traces), Prometheus
+# (métricas) e Grafana (painel) — Loki e Pyroscope sobem junto, fora do escopo deste projeto, e
+# não há como desligá-los sem sobrescrever o ponto de entrada da imagem. Deployment sem PVC: o
+# backend é descartável por desenho — perder o histórico num restart não é um requisito que este
+# projeto sustenta.
 #
-# NÃO é pré-requisito da aplicação: API e Worker seguem operando com este workload ausente (task
-# 6.7) — a instrumentação já absorve exportador indisponível (task 1.5).
+# NÃO é pré-requisito da aplicação: API e Worker seguem operando com este workload ausente — a
+# instrumentação já absorve exportador indisponível.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

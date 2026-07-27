@@ -58,7 +58,7 @@ public sealed class ConsumidorDeTransferencias(
 
         // Encadeado a partir do contexto extraído do cabeçalho, não do contexto ambiente: o
         // processamento roda dentro de um callback do consumidor assíncrono, onde o contexto
-        // ambiente não é garantido (design.md, D6). Sem este span, os spans de banco da
+        // ambiente não é garantido. Sem este span, os spans de banco da
         // liquidação nascem soltos, e é aqui que o trace se partiria.
         var contextoExtraido = RabbitMQActivitySource.ContextExtractor(ea.BasicProperties);
         using var atividade = InstrumentacaoDoWorker.ActivitySource.StartActivity(

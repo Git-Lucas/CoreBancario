@@ -1,8 +1,7 @@
 # Marca-d'água de memória em valor absoluto, abaixo do limite do contêiner — sem isso, o broker
 # calcula a marca como fração da memória da máquina, não do cgroup, e o controle de fluxo nunca
-# dispara antes do processo ser encerrado por limite de memória (design.md da change
-# add-observability, D12). Mesmo arquivo do docker-compose.yml, para que o defeito não sobreviva
-# no caminho de desenvolvimento sem cluster.
+# dispara antes do processo ser encerrado por limite de memória. Mesmo arquivo do
+# docker-compose.yml, para que o defeito não sobreviva no caminho de desenvolvimento sem cluster.
 apiVersion: v1
 kind: ConfigMap
 metadata:

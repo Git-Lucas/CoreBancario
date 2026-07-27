@@ -7,7 +7,7 @@ namespace CoreBancario.Worker;
 /// Nada aqui é automático: as fronteiras técnicas (HTTP, banco, mensageria) vêm de instrumentação
 /// de biblioteca, mas "uma transferência foi liquidada" é conhecimento de domínio que nenhum
 /// framework tem — por isso o Worker precisa do próprio <see cref="ActivitySource"/> e
-/// <see cref="Meter"/>. Ver design.md, D6 e D7.
+/// <see cref="Meter"/>.
 /// </summary>
 public static class InstrumentacaoDoWorker
 {
@@ -35,7 +35,7 @@ public static class InstrumentacaoDoWorker
 
 /// <summary>
 /// Rótulo de desfecho do processamento — cardinalidade fixa e pequena, ao contrário de
-/// `liquidacao_id`/`conta_id`, que nunca podem virar rótulo de métrica (design.md, D8).
+/// `liquidacao_id`/`conta_id`, que nunca podem virar rótulo de métrica.
 /// </summary>
 public static class Desfechos
 {

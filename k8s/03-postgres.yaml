@@ -37,8 +37,7 @@ spec:
           # 384Mi medido sob carga real da semeadura (1.200.000 lançamentos, 4 índices), não
           # estimado: pico de 76 MiB, sem encerramento por memória. Não desce mais — sob este
           # teto, o cache compartilhado do banco fica em 160 MiB (42% do orçamento), e é ele que
-          # sustenta o index-only scan do extrato que o PRD-1 existe para demonstrar (design.md
-          # da change add-observability, D11).
+          # sustenta o index-only scan do extrato, a consulta mais sensível a esse orçamento.
           resources:
             requests:
               cpu: 250m
