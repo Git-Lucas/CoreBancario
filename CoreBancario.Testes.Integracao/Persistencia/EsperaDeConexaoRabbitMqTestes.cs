@@ -6,9 +6,8 @@ using Testcontainers.RabbitMq;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Espera de inicialização aplicada à primeira conexão com o RabbitMQ (1.5 em tasks.md da change
-/// add-k8s-packaging, D1 em design.md): mesmo tratamento que <c>MigracaoInicializacao</c> já dava
-/// ao banco, agora simétrico para o broker.
+/// Espera de inicialização aplicada à primeira conexão com o RabbitMQ: mesmo tratamento que
+/// <c>MigracaoInicializacao</c> já dava ao banco, agora simétrico para o broker.
 /// </summary>
 [Collection(nameof(TransferenciaColecaoDeTestes))]
 public class EsperaDeConexaoRabbitMqTestes(RabbitMqFixture rabbit)

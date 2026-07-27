@@ -1,5 +1,7 @@
-# Reusa a imagem do Worker com args: ["--seed"] (D8 em design.md) — só funciona porque o
-# ENTRYPOINT é forma exec com o nome literal do assembly, e o Kubernetes anexa args a ele.
+# Reusa a imagem do Worker com args: ["--seed"] — carga de execução única, a definição de um Job,
+# e custa um manifesto de vinte linhas em vez de uma imagem própria. Só funciona porque o
+# ENTRYPOINT é forma exec com o nome literal do assembly (não a forma shell), e o Kubernetes anexa
+# args a ele — na forma shell o sh viraria PID 1 e o SIGTERM deixaria de chegar na aplicação.
 # A geração dos 1.200.000 lançamentos roda inteira em SQL no lado do PostgreSQL (join de tabelas
 # temporárias); o processo .NET só envia os comandos e espera, por isso o limite aqui é modesto —
 # quem carrega a massa de dados é o StatefulSet do banco, não este Job.

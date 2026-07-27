@@ -1,6 +1,7 @@
-# Mesma razão do StatefulSet do PostgreSQL (D4 em design.md). Ponto de montagem em
-# /var/lib/rabbitmq, o mesmo do docker-compose.yml e o volume declarado pela imagem
-# rabbitmq:4-management.
+# Mesma razão do StatefulSet do PostgreSQL: identidade estável e PVC ligado ao ordinal, não
+# redundância — evita dois pods montando o mesmo volume ReadWriteOnce durante uma atualização.
+# Ponto de montagem em /var/lib/rabbitmq, o mesmo do docker-compose.yml e o volume declarado pela
+# imagem rabbitmq:4-management.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -51,7 +52,7 @@ spec:
 ---
 # Sem cabeçalho, como o do PostgreSQL: o painel de administração (porta 15672) fica alcançável
 # dentro do cluster (kubectl port-forward, ou de outro pod), nunca pelo Ingress — só a Api é
-# exposta externamente (rede-e-exposicao-no-cluster).
+# exposta externamente.
 apiVersion: v1
 kind: Service
 metadata:

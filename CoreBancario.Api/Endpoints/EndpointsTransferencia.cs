@@ -6,8 +6,9 @@ public static class EndpointsTransferencia
 {
     public static IEndpointRouteBuilder MapEndpointsTransferencia(this IEndpointRouteBuilder rotas)
     {
-        // C2.2/C2.4 do PRD-2: nenhuma dependência de banco no caminho — só `SolicitarTransferencia`
-        // (que só conhece `IPublicadorDeTransferencia`) é resolvida aqui.
+        // Nenhuma dependência de banco no caminho — só `SolicitarTransferencia` (que só conhece
+        // `IPublicadorDeTransferencia`) é resolvida aqui. Banco indisponível vira degradação (a
+        // transferência enfileira e liquida depois), não indisponibilidade da API.
         rotas.MapPost("/transferencias", async (
             ComandoSolicitarTransferencia comando,
             SolicitarTransferencia caso,

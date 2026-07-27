@@ -3,8 +3,8 @@ using CoreBancario.Dominio.Identidades;
 namespace CoreBancario.Dominio.Ledger;
 
 /// <summary>
-/// Partida dobrada: não é uma tabela nem uma entidade persistida (D4 em design.md) — existe apenas
-/// para produzir, de forma correlacionada, o par débito/crédito que compõe uma liquidação.
+/// Partida dobrada: não é uma tabela nem uma entidade persistida — existe apenas para produzir,
+/// de forma correlacionada, o par débito/crédito que compõe uma liquidação.
 /// </summary>
 public sealed class Liquidacao
 {

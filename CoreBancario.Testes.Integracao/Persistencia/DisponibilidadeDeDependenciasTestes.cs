@@ -6,9 +6,11 @@ using Microsoft.EntityFrameworkCore;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Disponibilidade cruzada das duas dependências (9.9/9.10 em tasks.md): o caminho de
-/// solicitação não depende do banco (D1/D3 em design.md), e a liquidação não depende de o
-/// broker estar disponível no momento em que o banco volta.
+/// Disponibilidade cruzada das duas dependências: o caminho de solicitação não toca o
+/// PostgreSQL (a API só publica, não resolve nomes), então banco indisponível vira degradação —
+/// as transferências enfileiram e liquidam depois — em vez de indisponibilidade; e a liquidação
+/// não depende de o broker estar disponível no momento em que o banco volta, porque a mensagem
+/// já está na fila esperando ser consumida.
 /// </summary>
 [Collection(nameof(TransferenciaColecaoDeTestes))]
 public class DisponibilidadeDeDependenciasTestes(PostgreSqlFixture postgres, RabbitMqFixture rabbit) : IAsyncLifetime

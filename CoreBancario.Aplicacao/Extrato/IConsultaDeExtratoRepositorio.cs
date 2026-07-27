@@ -2,7 +2,8 @@ using CoreBancario.Dominio.Identidades;
 
 namespace CoreBancario.Aplicacao.Extrato;
 
-/// <summary>Projeção crua de uma linha — só o que o índice de cobertura entrega (D9 em design.md).</summary>
+/// <summary>Projeção crua de uma linha — só o que o índice de cobertura entrega. Qualquer campo
+/// além destes força o plano a visitar o heap linha a linha em vez de responder só pelo índice.</summary>
 public sealed record LinhaExtratoBruta(LancamentoId Id, decimal Valor, string ContraparteNome);
 
 public sealed record ResultadoConsultaExtrato(IReadOnlyList<LinhaExtratoBruta> Linhas, LancamentoId? ProximoCursor);

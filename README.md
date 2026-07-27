@@ -8,7 +8,7 @@ A conexão com o RabbitMQ é lida de `ConnectionStrings:RabbitMQ`, com o valor d
 
 ## Como rodar localmente
 
-1. **Subir o PostgreSQL 18 e o RabbitMQ** (requisitos de versão — ver `docs/prd/PRD-1-ledger-e-extrato.md` e `docs/prd/PRD-2-transferencia-assincrona.md`):
+1. **Subir o PostgreSQL 18 e o RabbitMQ** (versões mínimas, já fixadas no `docker-compose.yml`):
 
    ```
    docker compose up -d
@@ -26,7 +26,7 @@ A conexão com o RabbitMQ é lida de `ConnectionStrings:RabbitMQ`, com o valor d
    dotnet run --project CoreBancario.Worker
    ```
 
-4. **Semear a massa de dados** (600.000 liquidações → 1.200.000 lançamentos, distribuição enviesada — ver PRD-1 C1.9). Repetível: cada execução esvazia e recarrega a tabela. Leva cerca de 25 a 40 segundos:
+4. **Semear a massa de dados** (600.000 liquidações → 1.200.000 lançamentos, distribuição enviesada). Repetível: cada execução esvazia e recarrega a tabela. Leva cerca de 25 a 40 segundos:
 
    ```
    dotnet run --project CoreBancario.Worker -- --seed
@@ -38,7 +38,7 @@ A conexão com o RabbitMQ é lida de `ConnectionStrings:RabbitMQ`, com o valor d
    curl "http://localhost:5046/contas/{contaId}/extrato?de=2024-01-01T00:00:00Z&ate=2026-12-31T00:00:00Z"
    ```
 
-## Transferência assíncrona (PRD-2)
+## Transferência assíncrona
 
 Solicitar uma transferência: a API valida estruturalmente, publica no RabbitMQ com publisher confirms e responde antes de qualquer lançamento existir no ledger.
 
@@ -52,18 +52,18 @@ curl -i -X POST http://localhost:5046/transferencias \
 - `400` — falha de validação estrutural (valor não positivo, identificador malformado, origem igual ao destino).
 - `503` — falha ou expiração da confirmação do broker; nada foi publicado.
 
-Não há endpoint de status (decisão registrada em `design.md` da change `add-async-transfer`, D2): a visibilidade do fluxo é o log estruturado dos dois processos e o consumidor de descartes. Para acompanhar uma transferência, use o `liquidacaoId` da resposta como filtro sobre os logs — formatados em JSON (`Scopes[].LiquidacaoId`) — da API e do Worker; ele localiza recebimento, publicação, consumo e liquidação sem nenhum outro insumo. Uma transferência que esgota as tentativas (`x-delivery-limit = 3`) aparece registrada pelo `ConsumidorDeDescartes`, com `liquidacaoId`, tentativas, motivo e corpo bruto — o único lugar em que uma transferência morta é observável.
+Não há endpoint de status: "morta na fila de descartes" não é observável a partir do banco (só "liquidada" seria, via `EXISTS` no ledger), e um endpoint que não distingue "ainda processando" de "falhou definitivamente" responderia a pergunta errada com confiança. A visibilidade do fluxo é o log estruturado dos dois processos e o consumidor de descartes. Para acompanhar uma transferência, use o `liquidacaoId` da resposta como filtro sobre os logs — formatados em JSON (`Scopes[].LiquidacaoId`) — da API e do Worker; ele localiza recebimento, publicação, consumo e liquidação sem nenhum outro insumo. Uma transferência que esgota as tentativas (`x-delivery-limit = 3`) aparece registrada pelo `ConsumidorDeDescartes`, com `liquidacaoId`, tentativas, motivo e corpo bruto — o único lugar em que uma transferência morta é observável.
 
 O painel do RabbitMQ (`http://localhost:15672`, credenciais `corebancario`/`corebancario`) mostra a topologia declarada: exchange `corebancario.transferencias`, fila `transferencias` (quorum, `x-delivery-limit = 3`), dead-letter exchange `corebancario.transferencias.dlx` e fila de descartes `transferencias.dlq`.
 
 ## Subida em cluster (Kubernetes)
 
-O `docker compose up -d` acima continua sendo o caminho de desenvolvimento sem cluster — não foi substituído. Este é o segundo caminho, exercitando os mesmos quatro componentes como workloads Kubernetes (ver PRD-3 e a change `add-k8s-packaging`).
+O `docker compose up -d` acima continua sendo o caminho de desenvolvimento sem cluster — não foi substituído. Este é o segundo caminho, exercitando os mesmos quatro componentes como workloads Kubernetes.
 
 ### Pré-requisitos
 
 - `docker`, `kubectl` e [`kind`](https://kind.sigs.k8s.io/) instalados.
-- Máquina `x86_64` (mesma arquitetura dos nodes do GKE — nenhum build multi-arquitetura é necessário).
+- Máquina `x86_64` — as imagens publicadas não são multi-arquitetura.
 
 ### Cluster local (kind)
 
@@ -118,24 +118,6 @@ docker push dockerlucasoliveira/corebancario-worker:latest
 ```
 
 Como o `Deployment` usa `imagePullPolicy: Always` sobre a tag `latest`, um `kubectl rollout restart deployment/api deployment/worker -n corebancario` já busca a imagem nova.
-
-### GKE (validação pontual)
-
-Sessão sob crédito — o objetivo é confirmar que os **mesmos** manifestos, sem edição, sobem em um cluster gerenciado, não manter o cluster de pé.
-
-1. Dimensionar o pool a partir da soma das reservas (`design.md`, D10: ~700m CPU / 1,5Gi, mais o `ingress-nginx` e os pods de sistema do GKE) e criar o cluster zonal.
-2. Instalar o `ingress-nginx` (variante padrão, não a de kind) e aguardar o balanceador receber endereço externo.
-3. `kubectl apply -f k8s/` — os mesmos manifestos do kind, sem nenhum campo alterado.
-4. Repetir o fluxo ponta a ponta pelo IP externo do balanceador.
-5. **Derrubar tudo ao final da sessão** — o custo não controlado é o risco real de um cluster gerenciado esquecido de pé:
-
-   ```
-   kubectl delete -f k8s/
-   kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
-   gcloud container clusters delete <nome-do-cluster> --zone <zona>
-   ```
-
-   Conferir depois que não sobrou balanceador (`gcloud compute forwarding-rules list`) nem disco persistente órfão (`gcloud compute disks list`) — um `Service` `LoadBalancer` ou um `PersistentVolumeClaim` esquecido não são derrubados pela remoção do cluster e continuam sendo cobrados.
 
 ## Testes
 

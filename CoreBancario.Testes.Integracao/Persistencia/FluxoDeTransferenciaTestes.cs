@@ -8,10 +8,10 @@ using RabbitMQ.Client;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Fluxo de transferência ponta a ponta contra RabbitMQ e PostgreSQL reais via Testcontainers
-/// (seção 9 em tasks.md). O laço de consumo é conduzido manualmente por `BasicGetAsync` — o
-/// mesmo `ack`/`nack` que `ConsumidorDeTransferencias` faria — para controlar deliveries com
-/// precisão, sem depender de tempo de espera de um `BackgroundService` em segundo plano.
+/// Fluxo de transferência ponta a ponta contra RabbitMQ e PostgreSQL reais via Testcontainers.
+/// O laço de consumo é conduzido manualmente por `BasicGetAsync` — o mesmo `ack`/`nack` que
+/// `ConsumidorDeTransferencias` faria — para controlar deliveries com precisão, sem depender de
+/// tempo de espera de um `BackgroundService` em segundo plano.
 /// </summary>
 [Collection(nameof(TransferenciaColecaoDeTestes))]
 public class FluxoDeTransferenciaTestes(PostgreSqlFixture postgres, RabbitMqFixture rabbit) : IAsyncLifetime
@@ -49,7 +49,8 @@ public class FluxoDeTransferenciaTestes(PostgreSqlFixture postgres, RabbitMqFixt
         await using var canal = await _conexao.CreateChannelAsync(cancellationToken: ct);
 
         // 1ª entrega: liquida de verdade, mas NÃO confirma — simula falha do Worker entre a
-        // persistência e o ack (D6 em design.md).
+        // persistência e o ack. Commit e ack não são simultâneos por desenho, então esse
+        // intervalo é exatamente onde uma reentrega pode encontrar o efeito já aplicado.
         var primeiraEntrega = await ReceberComEsperaAsync(canal, ct);
         var solicitacao = AmbienteDeTransferencia.Desserializar(primeiraEntrega.Body);
         Assert.Equal(ResultadoLiquidacao.Liquidada, await _ambiente.LiquidarAsync(solicitacao, ct));
@@ -98,8 +99,11 @@ public class FluxoDeTransferenciaTestes(PostgreSqlFixture postgres, RabbitMqFixt
 
         var idVenenoso = await PublicarMensagemVenenosaAsync(canal, ct);
 
-        // x-delivery-limit=3 permite 3 reentregas (1.2 em tasks.md/evidencias): 4 tentativas no
-        // total antes do dead-letter, confirmadas aqui pelo mesmo MessageId em todas elas.
+        // x-delivery-limit=3 permite 3 reentregas: 4 tentativas no total antes do dead-letter,
+        // confirmadas aqui pelo mesmo MessageId em todas elas. Verificado empiricamente contra
+        // RabbitMQ 4.3 que só `basic.reject` incrementa x-delivery-count — `basic.nack` no mesmo
+        // canal não conta, o que faria este teste nunca alcançar a DLQ se o consumidor usasse
+        // `nack` em vez de `reject`.
         for (var tentativa = 0; tentativa < 4; tentativa++)
         {
             var entrega = await ReceberComEsperaAsync(canal, ct);
@@ -231,7 +235,8 @@ public class FluxoDeTransferenciaTestes(PostgreSqlFixture postgres, RabbitMqFixt
         }
 
         // Transferência 2: a conta antes inédita agora é contraparte de novo — o nome gerado na
-        // primeira vez deve se repetir, resolvido por consulta (D4 em design.md).
+        // primeira vez deve se repetir, resolvido por consulta ao próprio ledger (que já gravou
+        // o nome inventado no primeiro lançamento dessa conta), não inventado de novo.
         var comando2 = new ComandoSolicitarTransferencia(Dominio.Identidades.ContaId.Nova().Valor, contaInedita.Valor, 8.00m);
         await _ambiente.NovoCasoDeSolicitacao().ExecutarAsync(comando2, ct);
 

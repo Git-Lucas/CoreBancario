@@ -6,9 +6,11 @@ using RabbitMQ.Client;
 namespace CoreBancario.Infraestrutura.Mensageria;
 
 /// <summary>
-/// D11 em design.md: o `202` é uma promessa irrevogável, então nunca é emitido antes do
-/// publisher confirm. Um canal novo por publicação evita ter que sincronizar o uso concorrente
-/// de um único `IChannel` entre requisições — otimização de vazão é não-objetivo explícito.
+/// O `202` é uma promessa irrevogável, então nunca é emitido antes do publisher confirm — fila
+/// durável e mensagem persistente não bastam, sem `confirm.select` a publicação é fire-and-forget
+/// e o broker pode aceitar e perder antes do fsync. Um canal novo por publicação evita ter que
+/// sincronizar o uso concorrente de um único `IChannel` entre requisições — otimização de vazão
+/// não é objetivo deste projeto.
 /// </summary>
 public sealed class PublicadorDeTransferencia(IConnection conexao, ILogger<PublicadorDeTransferencia> log)
     : IPublicadorDeTransferencia

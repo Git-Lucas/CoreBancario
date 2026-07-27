@@ -1,7 +1,10 @@
-# replicas: 1 evita duas réplicas migrando em paralelo (a migração roda no startup — D13 do PRD-1).
-# strategy: Recreate é a metade que replicas: 1 sozinho não entrega: o default RollingUpdate
-# arredonda maxSurge para 1 e sobe o pod novo antes de matar o velho, o que volta a ter dois
-# processos migrando ao mesmo tempo (D3 em design.md).
+# replicas: 1 evita duas réplicas migrando em paralelo (a aplicação aplica migrations no próprio
+# startup — anti-padrão consciente de projeto de estudo; em produção seria um passo de deploy
+# separado). strategy: Recreate é a metade que replicas: 1 sozinho não entrega: o default
+# RollingUpdate arredonda maxSurge para 1 e sobe o pod novo antes de matar o velho, o que volta a
+# ter dois processos migrando ao mesmo tempo. Recreate mata antes de subir e paga com
+# indisponibilidade durante a atualização — aceito porque ninguém além de quem desenvolve consome
+# esta API.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,8 +34,12 @@ spec:
             - secretRef:
                 name: corebancario-secrets
           # Orçamento de 150s (30 tentativas * 5s) cobre com folga os até 120s que a espera de
-          # inicialização (D1) pode legitimamente levar com banco e broker ausentes (D2 em
-          # design.md). Enquanto a startup não passa, readiness e liveness ficam suspensas.
+          # inicialização pode legitimamente levar com banco e broker ausentes (60s esperando o
+          # banco para migrar, mais 60s esperando o broker — os processos não têm garantia de
+          # ordem de subida entre workloads do Kubernetes, então esperam por conta própria em vez
+          # de assumir a dependência já de pé). Enquanto a startup não passa, readiness e liveness
+          # ficam suspensas — sem isso, uma liveness ingênua mataria o pod no meio da espera
+          # legítima, causando um laço de reinícios que parece falha da aplicação e é falha da sonda.
           startupProbe:
             httpGet:
               path: /sistema/saude

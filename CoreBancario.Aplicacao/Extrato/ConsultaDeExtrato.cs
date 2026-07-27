@@ -6,7 +6,7 @@ namespace CoreBancario.Aplicacao.Extrato;
 /// </summary>
 public sealed class ConsultaDeExtrato(IConsultaDeExtratoRepositorio repositorio)
 {
-    // Moeda é constante de sistema (PRD-1 C1.3/C1.11): nunca lida do banco.
+    // Moeda é constante de sistema (mono-moeda, sem conversão nem taxa): nunca lida do banco.
     private const string MoedaDoSistema = "BRL";
 
     public async Task<PaginaExtrato> ExecutarAsync(

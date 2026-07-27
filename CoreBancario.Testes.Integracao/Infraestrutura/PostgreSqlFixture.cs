@@ -7,8 +7,8 @@ namespace CoreBancario.Testes.Integracao.Infraestrutura;
 
 /// <summary>
 /// Um PostgreSQL 18 descartável por execução da suíte, com o esquema criado pelas próprias
-/// migrations (D15 em design.md) — compartilhado entre os testes da coleção via
-/// <see cref="BancoColecaoDeTestes"/>, não recriado por teste.
+/// migrations — compartilhado entre os testes da coleção via <see cref="BancoColecaoDeTestes"/>,
+/// não recriado por teste.
 /// </summary>
 public sealed class PostgreSqlFixture : IAsyncLifetime
 {
@@ -54,7 +54,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await comando.ExecuteNonQueryAsync();
     }
 
-    /// <summary>Usado pelo teste de indisponibilidade de banco (9.10).</summary>
+    /// <summary>Usado pelo teste de indisponibilidade de banco.</summary>
     public Task PararAsync(CancellationToken cancellationToken = default) => _container.StopAsync(cancellationToken);
 
     public Task IniciarAsync(CancellationToken cancellationToken = default) => _container.StartAsync(cancellationToken);

@@ -3,7 +3,8 @@ using CoreBancario.Dominio.Identidades;
 namespace CoreBancario.Dominio.Ledger;
 
 /// <summary>
-/// Invenção determinística de nome de titular para conta inédita no ledger (D4/D5 em design.md).
+/// Invenção determinística de nome de titular para conta inédita no ledger — não há cadastro de
+/// contas, então alguém precisa produzir esse nome na primeira vez que a conta aparece.
 /// Função pura sobre os bytes do <see cref="ContaId"/>: mesma entrada sempre produz a mesma
 /// saída, o que torna inofensiva a corrida entre duas liquidações concorrentes inventando o
 /// nome da mesma conta pela primeira vez.

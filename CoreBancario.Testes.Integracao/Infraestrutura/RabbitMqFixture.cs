@@ -4,8 +4,8 @@ using Testcontainers.RabbitMq;
 namespace CoreBancario.Testes.Integracao.Infraestrutura;
 
 /// <summary>
-/// Um RabbitMQ 4.x descartável por execução da suíte (9.1 em tasks.md), reaproveitando o padrão
-/// de <see cref="PostgreSqlFixture"/>: compartilhado entre os testes da coleção, não recriado
+/// Um RabbitMQ 4.x descartável por execução da suíte, reaproveitando o padrão de
+/// <see cref="PostgreSqlFixture"/>: compartilhado entre os testes da coleção, não recriado
 /// por teste — a topologia é declarada por cada teste que precisa dela.
 /// </summary>
 public sealed class RabbitMqFixture : IAsyncLifetime

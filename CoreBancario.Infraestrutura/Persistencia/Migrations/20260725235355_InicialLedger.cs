@@ -28,9 +28,11 @@ namespace CoreBancario.Infraestrutura.Persistencia.Migrations
                     table.PrimaryKey("pk_lancamentos", x => x.id);
                 });
 
-            // D5/D6 em design.md: coluna gerada pelo banco a partir do id, para que data_criacao
-            // nunca possa divergir do instante codificado na identidade v7. Premissa de que
-            // uuid_extract_timestamp é aceita em GENERATED ... STORED validada em 1.2 (PG 18.4).
+            // Coluna gerada pelo banco a partir do id, para que data_criacao nunca possa divergir
+            // do instante codificado na identidade v7 — se fosse escrita pela aplicação minutos
+            // depois de o id nascer, filtrar por data e filtrar por id-como-tempo dariam
+            // respostas diferentes. Validado empiricamente (PG 18.4): uuid_extract_timestamp é
+            // aceita dentro de GENERATED ... STORED, que exige função imutável.
             migrationBuilder.Sql(
                 """
                 ALTER TABLE lancamentos
@@ -38,8 +40,11 @@ namespace CoreBancario.Infraestrutura.Persistencia.Migrations
                     GENERATED ALWAYS AS (uuid_extract_timestamp(id)) STORED NOT NULL;
                 """);
 
-            // D7 em design.md: garantia de append-only reforçada pelo banco. TRUNCATE fica fora
-            // do escopo — é operação row-level, e TRUNCATE não dispara trigger BEFORE UPDATE/DELETE.
+            // Garantia de append-only reforçada pelo banco, não só por convenção de código —
+            // domínio sem caminho de mutação seria violável por qualquer UPDATE manual e não
+            // seria demonstrável. TRUNCATE fica fora do escopo — é operação row-level, e TRUNCATE
+            // não dispara trigger BEFORE UPDATE/DELETE; deixá-lo livre permite recriar a massa de
+            // dados durante o desenvolvimento sem um caminho oficial de reset.
             migrationBuilder.Sql(
                 """
                 CREATE FUNCTION fn_lancamentos_bloqueia_update_delete()
@@ -60,8 +65,9 @@ namespace CoreBancario.Infraestrutura.Persistencia.Migrations
                 EXECUTE FUNCTION fn_lancamentos_bloqueia_update_delete();
                 """);
 
-            // D9 em design.md: índice de cobertura do extrato — a chave filtra e ordena,
-            // o INCLUDE cobre a listagem sem tocar o heap (Index Only Scan, Heap Fetches: 0).
+            // Índice de cobertura do extrato — a chave filtra e ordena, o INCLUDE cobre a
+            // listagem sem tocar o heap (Index Only Scan, Heap Fetches: 0), o que torna o custo
+            // de acesso da página 5.000 igual ao da página 1.
             migrationBuilder.Sql(
                 """
                 CREATE INDEX ix_lancamentos_extrato
@@ -69,7 +75,7 @@ namespace CoreBancario.Infraestrutura.Persistencia.Migrations
                     INCLUDE (valor, contraparte_nome);
                 """);
 
-            // Idempotência da liquidação (PRD-2): a mesma liquidação não pode produzir mais de
+            // Idempotência da liquidação: a mesma liquidação não pode produzir mais de
             // um lançamento para a mesma conta.
             migrationBuilder.Sql(
                 """

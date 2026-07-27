@@ -16,10 +16,10 @@ public sealed class ConsultaDeExtratoRepositorio(CoreBancarioDbContext contexto)
         CancellationToken cancellationToken)
     {
         // Piso sempre derivado do parâmetro de início da requisição, nunca do cursor. Teto
-        // unificado (D6 em design.md): primeira página usa o teto do período; demais usam o
-        // cursor recebido — a mesma variável, então a consulta abaixo não precisa se ramificar.
-        // Um cursor adulterado nunca empurra o teto além do período (D14): o valor efetivo
-        // fica sempre limitado ao teto calculado a partir do fim solicitado.
+        // unificado: primeira página usa o teto do período; demais usam o cursor recebido — a
+        // mesma variável, então a consulta abaixo não precisa se ramificar. Um cursor adulterado
+        // nunca empurra o teto além do período: o valor efetivo fica sempre limitado ao teto
+        // calculado a partir do fim solicitado.
         var piso = new LancamentoId(Guid7.Piso(de));
         var tetoDoPeriodo = new LancamentoId(Guid7.Piso(ate));
         var teto = cursor is { } cursorValor && cursorValor < tetoDoPeriodo ? cursorValor : tetoDoPeriodo;

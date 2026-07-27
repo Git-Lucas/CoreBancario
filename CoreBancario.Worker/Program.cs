@@ -10,9 +10,10 @@ var executarSeed = args.Contains("--seed", StringComparer.OrdinalIgnoreCase);
 
 var construtor = Host.CreateApplicationBuilder(args);
 
-// 8.1 em tasks.md: formatador JSON, para que o liquidacao_id (aberto em escopo — 8.2) seja campo
-// consultável no log, não texto interpolado. Fica fora do modo --seed: ali não há liquidacao_id
-// para correlacionar, e o log de progresso do seed é lido por humano, não por consulta.
+// Formatador JSON, para que o liquidacao_id (aberto em escopo por LiquidarTransferencia) seja
+// campo consultável no log, não texto interpolado. Fica fora do modo --seed: ali não há
+// liquidacao_id para correlacionar, e o log de progresso do seed é lido por humano, não por
+// consulta.
 if (!executarSeed)
 {
     construtor.Logging.ClearProviders();
@@ -57,8 +58,8 @@ if (executarSeed)
     return;
 }
 
-// Idempotente (D12 em design.md): mesma escolha já feita para as migrations — não introduzir
-// passo de deploy separado num projeto com este prazo.
+// Idempotente: mesma escolha já feita para as migrations — não introduzir passo de deploy
+// separado num projeto com este prazo.
 await TopologiaDeMensageria.DeclararAsync(anfitriao.Services.GetRequiredService<IConnection>());
 
 await anfitriao.RunAsync();

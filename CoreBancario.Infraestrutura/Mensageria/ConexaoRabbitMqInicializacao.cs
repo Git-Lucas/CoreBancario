@@ -5,10 +5,10 @@ namespace CoreBancario.Infraestrutura.Mensageria;
 
 /// <summary>
 /// Abertura da primeira conexão com o RabbitMQ com a mesma espera que
-/// <see cref="Persistencia.MigracaoInicializacao"/> já aplica ao banco (D1 em design.md da change
-/// add-k8s-packaging) — sob Kubernetes não há garantia de ordem de subida entre os workloads.
-/// A reconexão em regime é responsabilidade do <see cref="ConnectionFactory.AutomaticRecoveryEnabled"/>
-/// do próprio cliente; esta espera cobre só a conexão inicial.
+/// <see cref="Persistencia.MigracaoInicializacao"/> já aplica ao banco — sob Kubernetes não há
+/// garantia de ordem de subida entre os workloads. A reconexão em regime é responsabilidade do
+/// <see cref="ConnectionFactory.AutomaticRecoveryEnabled"/> do próprio cliente; esta espera cobre
+/// só a conexão inicial.
 /// </summary>
 public static class ConexaoRabbitMqInicializacao
 {

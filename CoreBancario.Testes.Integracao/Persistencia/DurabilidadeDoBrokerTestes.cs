@@ -5,7 +5,7 @@ using RabbitMQ.Client;
 
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
-/// <summary>Durabilidade sob restart do broker com mensagem pendente (9.4 em tasks.md).</summary>
+/// <summary>Durabilidade sob restart do broker com mensagem pendente.</summary>
 [Collection(nameof(TransferenciaColecaoDeTestes))]
 public class DurabilidadeDoBrokerTestes(PostgreSqlFixture postgres, RabbitMqFixture rabbit) : IAsyncLifetime
 {

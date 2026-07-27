@@ -13,8 +13,9 @@ public class LancamentoConfiguracao : IEntityTypeConfiguration<Lancamento>
 
         builder.HasKey(l => l.Id).HasName("pk_lancamentos");
 
-        // Sem DEFAULT no banco (D3 em design.md): a ausência de geração pela aplicação
-        // deve falhar como NOT NULL, nunca ser mascarada por um id gerado tardiamente.
+        // Sem DEFAULT no banco: a ausência de geração pela aplicação deve falhar como NOT NULL,
+        // nunca ser mascarada por um id gerado tardiamente pelo banco — o id precisa existir
+        // antes da persistência para servir de correlation id e chave de idempotência.
         builder.Property(l => l.Id)
             .HasColumnName("id")
             .HasConversion(id => id.Valor, valor => new LancamentoId(valor))
@@ -30,7 +31,8 @@ public class LancamentoConfiguracao : IEntityTypeConfiguration<Lancamento>
             .HasConversion(id => id.Valor, valor => new LiquidacaoId(valor))
             .IsRequired();
 
-        // Complex type (D8 em design.md): duas colunas na própria tabela, sem entidade-sombra.
+        // Complex type, não OwnsOne: duas colunas na própria tabela, sem entidade-sombra com
+        // identidade própria.
         builder.ComplexProperty(l => l.Valor, valorBuilder =>
         {
             valorBuilder.Property(v => v.Valor)
@@ -55,9 +57,11 @@ public class LancamentoConfiguracao : IEntityTypeConfiguration<Lancamento>
             .HasMaxLength(200)
             .IsRequired();
 
-        // Shadow property: data_criacao não é estado de domínio, é derivada pelo banco a
-        // partir do id (D5/D6 em design.md). A coluna gerada em si vem em SQL bruto na
-        // migration; aqui só descrevemos o mapeamento para o EF não tentar escrevê-la.
+        // Shadow property: data_criacao não é estado de domínio, é derivada pelo banco a partir
+        // do id (GENERATED ALWAYS AS uuid_extract_timestamp(id) STORED) — se fosse escrita pela
+        // aplicação minutos depois de o id nascer, filtrar por data e filtrar por id-como-tempo
+        // dariam respostas diferentes. A coluna gerada em si vem em SQL bruto na migration; aqui
+        // só descrevemos o mapeamento para o EF não tentar escrevê-la.
         builder.Property<DateTimeOffset>("DataCriacao")
             .HasColumnName("data_criacao")
             .HasColumnType("timestamptz")

@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 
 var construtor = WebApplication.CreateBuilder(args);
 
-// 8.1 em tasks.md: formatador JSON, para que o liquidacao_id (aberto em escopo — 8.2) seja campo
-// consultável no log, não texto interpolado.
+// Formatador JSON, para que o liquidacao_id (aberto em escopo por SolicitarTransferencia) seja
+// campo consultável no log, não texto interpolado.
 construtor.Logging.ClearProviders();
 construtor.Logging.AddJsonConsole(opcoes => opcoes.IncludeScopes = true);
 
@@ -40,7 +40,7 @@ var aplicacao = construtor.Build();
 
 await aplicacao.AplicarMigrationsAsync();
 
-// Idempotente (D12 em design.md), na inicialização dos dois processos — API e Worker.
+// Idempotente, na inicialização dos dois processos — API e Worker.
 await TopologiaDeMensageria.DeclararAsync(conexaoRabbitMq);
 
 aplicacao.MapEndpointsSistema();

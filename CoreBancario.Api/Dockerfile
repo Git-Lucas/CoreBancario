@@ -25,8 +25,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Usuário não-root já embutido na imagem oficial (D2.2 em design.md não detalha isto por ser
-# padrão das imagens .NET 8+; $APP_UID é o identificador estável entre as variantes da imagem).
+# Usuário não-root já embutido na imagem oficial — padrão das imagens .NET 8+; $APP_UID é o
+# identificador estável entre as variantes da imagem.
 USER $APP_UID
 
 # Forma exec: o processo dotnet fica em PID 1 e recebe SIGTERM diretamente do Kubernetes.
