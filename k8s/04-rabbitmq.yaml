@@ -1,3 +1,17 @@
+# Marca-d'água de memória em valor absoluto, abaixo do limite do contêiner — sem isso, o broker
+# calcula a marca como fração da memória da máquina, não do cgroup, e o controle de fluxo nunca
+# dispara antes do processo ser encerrado por limite de memória (design.md da change
+# add-observability, D12). Mesmo arquivo do docker-compose.yml, para que o defeito não sobreviva
+# no caminho de desenvolvimento sem cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-conf
+  namespace: corebancario
+data:
+  20-corebancario.conf: |
+    vm_memory_high_watermark.absolute = 384MiB
+---
 # Mesma razão do StatefulSet do PostgreSQL: identidade estável e PVC ligado ao ordinal, não
 # redundância — evita dois pods montando o mesmo volume ReadWriteOnce durante uma atualização.
 # Ponto de montagem em /var/lib/rabbitmq, o mesmo do docker-compose.yml e o volume declarado pela
@@ -26,6 +40,8 @@ spec:
               containerPort: 5672
             - name: management
               containerPort: 15672
+            - name: prometheus
+              containerPort: 15692
           envFrom:
             - configMapRef:
                 name: corebancario-config
@@ -34,6 +50,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: conf
+              mountPath: /etc/rabbitmq/conf.d/20-corebancario.conf
+              subPath: 20-corebancario.conf
+              readOnly: true
           resources:
             requests:
               cpu: 250m
@@ -41,6 +61,10 @@ spec:
             limits:
               cpu: 250m
               memory: 512Mi
+      volumes:
+        - name: conf
+          configMap:
+            name: rabbitmq-conf
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -69,3 +93,6 @@ spec:
     - name: management
       port: 15672
       targetPort: 15672
+    - name: prometheus
+      port: 15692
+      targetPort: 15692

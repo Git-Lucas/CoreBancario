@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using CoreBancario.Aplicacao.Transferencias;
 using CoreBancario.Dominio.Identidades;
@@ -55,6 +56,16 @@ public sealed class ConsumidorDeTransferencias(
         using var escopoDeLog = log.BeginScope(new Dictionary<string, object> { ["LiquidacaoId"] = liquidacaoId });
         log.LogInformation("Mensagem da transferência {LiquidacaoId} recebida (tentativa {Tentativa}).", liquidacaoId, tentativa);
 
+        // Encadeado a partir do contexto extraído do cabeçalho, não do contexto ambiente: o
+        // processamento roda dentro de um callback do consumidor assíncrono, onde o contexto
+        // ambiente não é garantido (design.md, D6). Sem este span, os spans de banco da
+        // liquidação nascem soltos, e é aqui que o trace se partiria.
+        var contextoExtraido = RabbitMQActivitySource.ContextExtractor(ea.BasicProperties);
+        using var atividade = InstrumentacaoDoWorker.ActivitySource.StartActivity(
+            "ProcessarTransferencia", ActivityKind.Internal, contextoExtraido);
+        atividade?.SetTag("liquidacao_id", liquidacaoId);
+
+        var cronometro = Stopwatch.StartNew();
         try
         {
             var mensagem = JsonSerializer.Deserialize<MensagemTransferencia>(ea.Body.Span, OpcoesJson)
@@ -68,14 +79,22 @@ public sealed class ConsumidorDeTransferencias(
 
             using var escopo = escopos.CreateScope();
             var casoDeUso = escopo.ServiceProvider.GetRequiredService<LiquidarTransferencia>();
-            await casoDeUso.ExecutarAsync(solicitacao, stoppingToken);
+            var resultado = await casoDeUso.ExecutarAsync(solicitacao, stoppingToken);
 
             await canal.BasicAckAsync(ea.DeliveryTag, multiple: false, stoppingToken);
+
+            var desfecho = resultado == ResultadoLiquidacao.Liquidada ? Desfechos.Liquidada : Desfechos.JaLiquidada;
+            InstrumentacaoDoWorker.RegistrarDesfecho(desfecho);
+            InstrumentacaoDoWorker.RegistrarDuracao(cronometro.Elapsed.TotalMilliseconds, desfecho);
         }
         catch (Exception ex)
         {
+            atividade?.SetStatus(ActivityStatusCode.Error, ex.Message);
             log.LogError(ex, "Falha ao liquidar transferência {LiquidacaoId}.", liquidacaoId);
             await canal.BasicRejectAsync(ea.DeliveryTag, requeue: true, stoppingToken);
+
+            InstrumentacaoDoWorker.RegistrarDesfecho(Desfechos.Falha);
+            InstrumentacaoDoWorker.RegistrarDuracao(cronometro.Elapsed.TotalMilliseconds, Desfechos.Falha);
         }
     }
 }

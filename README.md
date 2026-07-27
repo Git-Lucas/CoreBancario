@@ -106,6 +106,32 @@ Derrubar o cluster local (os volumes vivem dentro do container do node — `kind
 kind delete cluster --name corebancario
 ```
 
+### Observabilidade
+
+O `kubectl apply -f k8s/` do passo 3 já sobe o backend de observabilidade junto com o resto — nenhum passo separado. API e Worker exportam traces e métricas por OTLP para ele; se o workload estiver ausente ou indisponível, os dois continuam operando normalmente (a exportação apenas falha em silêncio).
+
+Alcançar o painel (a imagem baixa e instala plugins na primeira subida — a primeira vez pode levar alguns minutos; as seguintes são rápidas):
+
+```
+kubectl port-forward -n corebancario deploy/otel-lgtm 3000:3000
+```
+
+Abrir `http://localhost:3000` (autenticação anônima habilitada, sem login). O painel "CoreBancario" já vem provisionado, com as métricas RED da API e do processamento assíncrono e a profundidade da fila de transferências — nenhum indicador declara limiar numérico de latência ou erro, porque não há linha de base de produção que sustente um.
+
+Ativar a exportação adicional para um backend externo compatível com OTLP (ex.: Dynatrace) — sem reinstrumentar nem reiniciar API e Worker:
+
+```
+kubectl edit secret corebancario-observabilidade-externa -n corebancario
+```
+
+Preencher `OTEL_EXPORTER_OTLP_ENDPOINT` (URL do backend) e `OTEL_EXPORTER_OTLP_HEADERS` (ex.: `Authorization=Api-Token <token>`) com o valor real — nunca versionado — e reiniciar só o coletor:
+
+```
+kubectl rollout restart deployment/otel-lgtm -n corebancario
+```
+
+O backend do cluster continua recebendo os mesmos sinais; a exportação externa é cumulativa, não substitutiva. Esvaziar os dois campos do `Secret` e reiniciar de novo desativa, sem erro nem sinal perdido.
+
 ### Reconstruir e publicar as imagens
 
 Necessário só após alterar código — as imagens públicas já publicadas (`dockerlucasoliveira/corebancario-api:latest`, `dockerlucasoliveira/corebancario-worker:latest`) bastam para só subir o cluster. O contexto de build é a **raiz do repositório** (os `Dockerfile` ficam em `CoreBancario.Api/` e `CoreBancario.Worker/`, mas os `ProjectReference` e os `Directory.*.props` exigem o contexto na raiz):

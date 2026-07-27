@@ -1,0 +1,399 @@
+# Cópia da configuração base do coletor embutido na imagem (D1), com um único acréscimo: o alvo
+# de raspagem do RabbitMQ no bloco `prometheus/collector` que a imagem já declara para as próprias
+# métricas internas — sem receptor novo (design.md da change add-observability, D3). Overlay, não
+# reescrita: sobrescrever esta cópia é o custo aceito em D3, mitigado pela tag fixa da imagem (D1).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-lgtm-config
+  namespace: corebancario
+data:
+  otelcol-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+            cors:
+              allowed_origins:
+                - http://*
+      prometheus/collector:
+        config:
+          scrape_configs:
+            - job_name: "opentelemetry-collector"
+              scrape_interval: 1s
+              static_configs:
+                - targets: ["127.0.0.1:8888"]
+            - job_name: "rabbitmq"
+              scrape_interval: 5s
+              # /metrics/per-object, não /metrics: o endpoint padrão só publica agregado do
+              # cluster, sem rótulo de fila — sem ele, "profundidade da fila de transferências"
+              # não é uma série distinguível de qualquer outra fila.
+              metrics_path: "/metrics/per-object"
+              static_configs:
+                - targets: ["rabbitmq:15692"]
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+        path: "/ready"
+
+    processors:
+      batch:
+
+    exporters:
+      otlp_http/metrics:
+        endpoint: http://127.0.0.1:9090/api/v1/otlp
+        tls:
+          insecure: true
+      otlp_http/traces:
+        endpoint: http://127.0.0.1:4418
+        tls:
+          insecure: true
+      otlp_http/logs:
+        endpoint: http://127.0.0.1:3100/otlp
+        tls:
+          insecure: true
+      otlp_grpc/profiles:
+        endpoint: http://127.0.0.1:4040
+        tls:
+          insecure: true
+      debug/metrics:
+        verbosity: detailed
+      debug/traces:
+        verbosity: detailed
+      debug/logs:
+        verbosity: detailed
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp_http/traces]
+        metrics:
+          receivers: [otlp, prometheus/collector]
+          processors: [batch]
+          exporters: [otlp_http/metrics]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp_http/logs]
+        profiles:
+          receivers: [otlp]
+          exporters: [otlp_grpc/profiles]
+---
+# Reafirma os três provedores de painel que a imagem já traz e acrescenta o quarto, o desta
+# mudança — o provisionamento por arquivo é uma lista fixa, não hierarquia: montar por cima do
+# original substitui a lista inteira, então os originais precisam ser repetidos aqui.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-lgtm-dashboards-provider
+  namespace: corebancario
+data:
+  grafana-dashboards.yaml: |
+    apiVersion: 1
+
+    providers:
+      - name: "RED Metrics (classic histogram)"
+        type: file
+        options:
+          path: /otel-lgtm/grafana-dashboard-red-metrics-classic.json
+          foldersFromFilesStructure: false
+      - name: "RED Metrics (exponential/native histogram)"
+        type: file
+        options:
+          path: /otel-lgtm/grafana-dashboard-red-metrics-native.json
+          foldersFromFilesStructure: false
+      - name: "JVM Metrics"
+        type: file
+        options:
+          path: /otel-lgtm/grafana-dashboard-jvm-metrics.json
+          foldersFromFilesStructure: false
+      - name: "CoreBancario"
+        type: file
+        options:
+          path: /otel-lgtm/corebancario-dashboard.json
+          foldersFromFilesStructure: false
+---
+# Painel desta mudança (tasks 7.1-7.3): RED da API e do processamento assíncrono, com o desfecho
+# visível, mais a profundidade da fila de transferências. Nenhum indicador declara limiar
+# numérico de latência ou de erro (task 7.4) — sem tráfego de produção e sem linha de base, um
+# limiar seria inventado (design.md, D10).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: corebancario-grafana-dashboard
+  namespace: corebancario
+data:
+  corebancario-dashboard.json: |
+    {
+      "id": null,
+      "uid": "corebancario-fluxo-transferencia",
+      "title": "CoreBancario — fluxo de transferência",
+      "tags": ["corebancario"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": { "from": "now-30m", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "row",
+          "title": "API — operações HTTP",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Taxa de requisições, por rota",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count[$__rate_interval]))",
+              "legendFormat": "{{http_route}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Erros HTTP (5xx), por rota",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[$__rate_interval]))",
+              "legendFormat": "{{http_route}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Duração das requisições (p50 / p95 / p99)",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "p50 {{http_route}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "p95 {{http_route}}"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "p99 {{http_route}}"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "row",
+          "title": "Worker — processamento de mensagens",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }
+        },
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "Mensagens processadas, por desfecho",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10, "stacking": { "mode": "normal" } } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (desfecho) (rate(corebancario_worker_mensagens_processadas_total[$__rate_interval]))",
+              "legendFormat": "{{desfecho}}"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "Erro no processamento (desfecho = falha)",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(corebancario_worker_mensagens_processadas_total{desfecho=\"falha\"}[$__rate_interval]))",
+              "legendFormat": "falha"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "timeseries",
+          "title": "Duração do processamento (p50 / p95 / p99)",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(corebancario_worker_duracao_processamento_milliseconds_bucket[$__rate_interval])))",
+              "legendFormat": "p50"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(corebancario_worker_duracao_processamento_milliseconds_bucket[$__rate_interval])))",
+              "legendFormat": "p95"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(corebancario_worker_duracao_processamento_milliseconds_bucket[$__rate_interval])))",
+              "legendFormat": "p99"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "row",
+          "title": "Broker — saúde da fila",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+        },
+        {
+          "id": 21,
+          "type": "timeseries",
+          "title": "Profundidade da fila de transferências",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "rabbitmq_queue_messages{queue=\"transferencias\"}",
+              "legendFormat": "prontas + não confirmadas"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "rabbitmq_queue_messages{queue=\"transferencias.dlq\"}",
+              "legendFormat": "descartes (DLQ)"
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "type": "timeseries",
+          "title": "Consumidores ativos na fila de transferências",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "rabbitmq_queue_consumers{queue=\"transferencias\"}",
+              "legendFormat": "consumidores"
+            }
+          ]
+        }
+      ]
+    }
+---
+# Backend único de observabilidade (design.md, D1): imagem que já reúne coletor, Tempo (traces),
+# Prometheus (métricas) e Grafana (painel) — Loki e Pyroscope sobem junto, fora do escopo do
+# PRD-4, e não há como desligá-los sem sobrescrever o ponto de entrada da imagem. Deployment sem
+# PVC: o backend é descartável por desenho (design.md, Context) — perder o histórico num restart
+# não é um requisito que este projeto sustenta.
+#
+# NÃO é pré-requisito da aplicação: API e Worker seguem operando com este workload ausente (task
+# 6.7) — a instrumentação já absorve exportador indisponível (task 1.5).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-lgtm
+  namespace: corebancario
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: otel-lgtm
+  template:
+    metadata:
+      labels:
+        app: otel-lgtm
+    spec:
+      containers:
+        - name: otel-lgtm
+          image: grafana/otel-lgtm:0.29.2
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: grafana-ui
+              containerPort: 3000
+          # Exportação adicional (seção 8): ausente/vazio por padrão — o fan-out só liga quando
+          # o Secret abaixo tem destino e credencial reais, aplicados fora do repositório (D13).
+          envFrom:
+            - secretRef:
+                name: corebancario-observabilidade-externa
+                optional: true
+          volumeMounts:
+            - name: config
+              mountPath: /otel-lgtm/otelcol-config.yaml
+              subPath: otelcol-config.yaml
+              readOnly: true
+            - name: dashboards-provider
+              mountPath: /otel-lgtm/grafana/conf/provisioning/dashboards/grafana-dashboards.yaml
+              subPath: grafana-dashboards.yaml
+              readOnly: true
+            - name: dashboard
+              mountPath: /otel-lgtm/corebancario-dashboard.json
+              subPath: corebancario-dashboard.json
+              readOnly: true
+          # Medido, não estimado (mesmo critério de D11): pico de 557 MiB sob tráfego real —
+          # traces, métricas e a raspagem do broker — no cluster kind local de 3,8 GiB. 768 MiB
+          # de limite dá folga para as consultas do painel (seção 7) sem se aproximar do teto do
+          # nó, que já hospeda os quatro workloads da aplicação mais o plano de controle do kind.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 640Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+      volumes:
+        - name: config
+          configMap:
+            name: otel-lgtm-config
+        - name: dashboards-provider
+          configMap:
+            name: otel-lgtm-dashboards-provider
+        - name: dashboard
+          configMap:
+            name: corebancario-grafana-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-lgtm
+  namespace: corebancario
+spec:
+  selector:
+    app: otel-lgtm
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: grafana-ui
+      port: 3000
+      targetPort: 3000

@@ -23,6 +23,7 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/conf.d/20-corebancario.conf:/etc/rabbitmq/conf.d/20-corebancario.conf:ro
 
 volumes:
   postgres-data:

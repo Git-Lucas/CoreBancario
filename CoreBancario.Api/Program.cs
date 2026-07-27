@@ -5,6 +5,15 @@ using CoreBancario.Aplicacao.Transferencias;
 using CoreBancario.Infraestrutura.Mensageria;
 using CoreBancario.Infraestrutura.Persistencia;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
+// O exportador OTLP usa gRPC sobre HTTP em texto claro (o coletor não tem TLS) — sem esta
+// chave, o HttpClient interno recusa a conexão h2c e o exportador falha em silêncio, sem
+// exceção nem log, porque a SDK relata isso via EventSource, não via ILogger.
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var construtor = WebApplication.CreateBuilder(args);
 
@@ -12,6 +21,23 @@ var construtor = WebApplication.CreateBuilder(args);
 // campo consultável no log, não texto interpolado.
 construtor.Logging.ClearProviders();
 construtor.Logging.AddJsonConsole(opcoes => opcoes.IncludeScopes = true);
+
+// TraceId no escopo do log quando há trace ativo — liga log e trace sem tornar o log
+// dependente de backend de observabilidade (nenhum exportador de log é registrado).
+construtor.Logging.Configure(opcoes => opcoes.ActivityTrackingOptions = ActivityTrackingOptions.TraceId);
+
+// Destino de exportação vem inteiramente de variáveis de ambiente padrão do OTel
+// (OTEL_EXPORTER_OTLP_ENDPOINT e afins) — nenhum valor embutido no código.
+construtor.Services.AddOpenTelemetry()
+    .ConfigureResource(recurso => recurso.AddService("CoreBancario.Api"))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddNpgsql()
+        .AddRabbitMQInstrumentation()
+        .AddOtlpExporter())
+    .WithMetrics(metricas => metricas
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter());
 
 construtor.Services.ConfigureHttpJsonOptions(opcoes =>
     opcoes.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
