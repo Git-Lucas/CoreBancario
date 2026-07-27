@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.git/
+.vs/
+.idea/
+docs/
+openspec/
+k8s/
+docker-compose.yml
+**/*.md
+**/appsettings.Development.json

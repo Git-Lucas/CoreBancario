@@ -1,0 +1,32 @@
+# Reusa a imagem do Worker com args: ["--seed"] (D8 em design.md) — só funciona porque o
+# ENTRYPOINT é forma exec com o nome literal do assembly, e o Kubernetes anexa args a ele.
+# A geração dos 1.200.000 lançamentos roda inteira em SQL no lado do PostgreSQL (join de tabelas
+# temporárias); o processo .NET só envia os comandos e espera, por isso o limite aqui é modesto —
+# quem carrega a massa de dados é o StatefulSet do banco, não este Job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed
+  namespace: corebancario
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: dockerlucasoliveira/corebancario-worker:latest
+          imagePullPolicy: Always
+          args: ["--seed"]
+          envFrom:
+            - configMapRef:
+                name: corebancario-config
+            - secretRef:
+                name: corebancario-secrets
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

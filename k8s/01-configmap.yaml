@@ -1,0 +1,13 @@
+# Parâmetros não sensíveis (D5 em design.md da change add-k8s-packaging). O que carrega senha —
+# mesmo embutida numa connection string inteira — vai para o Secret, nunca aqui.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: corebancario-config
+  namespace: corebancario
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  Logging__LogLevel__Default: "Information"
+  POSTGRES_DB: "corebancario"
+  POSTGRES_USER: "corebancario"
+  RABBITMQ_DEFAULT_USER: "corebancario"

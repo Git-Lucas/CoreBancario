@@ -1,0 +1,36 @@
+# Mesma forma da Api (replicas: 1 + Recreate, D3 em design.md). Sem sonda: o Worker não tem
+# superfície HTTP, e as duas formas de parar de trabalhar (processo morto, ou queda do broker já
+# coberta pela reconexão automática do cliente) já são visíveis sem uma probe (D9 em design.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: corebancario
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: dockerlucasoliveira/corebancario-worker:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: corebancario-config
+            - secretRef:
+                name: corebancario-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi

@@ -21,28 +21,16 @@ public static class MigracaoInicializacao
         var contexto = escopo.ServiceProvider.GetRequiredService<CoreBancarioDbContext>();
         var log = escopo.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(MigracaoInicializacao));
 
-        Exception? ultimaFalha = null;
-
-        for (var tentativa = 1; tentativa <= MaximoTentativas; tentativa++)
-        {
-            try
+        await EsperaComRepeticao.ExecutarAsync(
+            async () =>
             {
                 await contexto.Database.MigrateAsync(cancellationToken);
-                return;
-            }
-            catch (Exception ex)
-            {
-                ultimaFalha = ex;
-                log.LogWarning(
-                    ex,
-                    "Falha ao aplicar migrations (tentativa {Tentativa}/{Maximo}). Banco pode ainda não estar pronto.",
-                    tentativa,
-                    MaximoTentativas);
-                await Task.Delay(IntervaloEntreTentativas, cancellationToken);
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Não foi possível aplicar as migrations após {MaximoTentativas} tentativas.", ultimaFalha);
+                return true;
+            },
+            "PostgreSQL",
+            log,
+            IntervaloEntreTentativas,
+            MaximoTentativas,
+            cancellationToken);
     }
 }

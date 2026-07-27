@@ -1,0 +1,24 @@
+# Preparo do cluster local — fora de k8s/ porque não é manifesto de aplicação (D7 em design.md
+# da change add-k8s-packaging). extraPortMappings expõe 80/443 do node de controle no host, e o
+# rótulo ingress-ready é o que o manifesto do ingress-nginx para kind usa como nodeSelector.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    # v1.36.1 (o padrão do kind 0.32) recusa iniciar o kubelet sob cgroup v1 — o que o Docker
+    # Desktop usa nesta máquina (WSL2). v1.33.2 é a última linha testada que ainda funciona aqui;
+    # decisão de ambiente local, sem relação com a versão do GKE (D3.9 do PRD-3 não fixa versão).
+    image: kindest/node:v1.33.2
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP

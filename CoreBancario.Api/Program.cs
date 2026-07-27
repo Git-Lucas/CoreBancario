@@ -5,7 +5,6 @@ using CoreBancario.Aplicacao.Transferencias;
 using CoreBancario.Infraestrutura.Mensageria;
 using CoreBancario.Infraestrutura.Persistencia;
 using Microsoft.EntityFrameworkCore;
-using RabbitMQ.Client;
 
 var construtor = WebApplication.CreateBuilder(args);
 
@@ -23,11 +22,15 @@ construtor.Services.AddDbContext<CoreBancarioDbContext>(opcoes =>
 construtor.Services.AddScoped<IConsultaDeExtratoRepositorio, ConsultaDeExtratoRepositorio>();
 construtor.Services.AddScoped<ConsultaDeExtrato>();
 
-var conexaoRabbitMq = await new ConnectionFactory
-{
-    Uri = new Uri(construtor.Configuration.GetConnectionString("RabbitMQ")
-        ?? throw new InvalidOperationException("ConnectionStrings:RabbitMQ não configurada.")),
-}.CreateConnectionAsync();
+// Logger de bootstrap: a conexão precisa existir antes de construtor.Build() para ser
+// registrada como singleton, e o container de DI só existe depois disso.
+using var logFactoryDeBootstrap = LoggerFactory.Create(
+    opcoes => opcoes.AddJsonConsole(json => json.IncludeScopes = true));
+
+var conexaoRabbitMq = await ConexaoRabbitMqInicializacao.AbrirComEsperaAsync(
+    construtor.Configuration.GetConnectionString("RabbitMQ")
+        ?? throw new InvalidOperationException("ConnectionStrings:RabbitMQ não configurada."),
+    logFactoryDeBootstrap.CreateLogger("ConexaoRabbitMq"));
 
 construtor.Services.AddSingleton(conexaoRabbitMq);
 construtor.Services.AddSingleton<IPublicadorDeTransferencia, PublicadorDeTransferencia>();
