@@ -1,0 +1,70 @@
+# replicas: 1 evita duas réplicas migrando em paralelo (a migração roda no startup — D13 do PRD-1).
+# strategy: Recreate é a metade que replicas: 1 sozinho não entrega: o default RollingUpdate
+# arredonda maxSurge para 1 e sobe o pod novo antes de matar o velho, o que volta a ter dois
+# processos migrando ao mesmo tempo (D3 em design.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: corebancario
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: dockerlucasoliveira/corebancario-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: corebancario-config
+            - secretRef:
+                name: corebancario-secrets
+          # Orçamento de 150s (30 tentativas * 5s) cobre com folga os até 120s que a espera de
+          # inicialização (D1) pode legitimamente levar com banco e broker ausentes (D2 em
+          # design.md). Enquanto a startup não passa, readiness e liveness ficam suspensas.
+          startupProbe:
+            httpGet:
+              path: /sistema/saude
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /sistema/saude
+              port: 8080
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /sistema/saude
+              port: 8080
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: corebancario
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080

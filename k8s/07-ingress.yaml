@@ -1,0 +1,20 @@
+# Sem host: regra catch-all, atende http://localhost no kind (via extraPortMappings do
+# kind-config.yaml) e http://<IP do balanceador> no GKE, sem DNS nem /etc/hosts (D7 em
+# design.md). Só a Api é exposta — banco, broker e Worker não têm Ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: corebancario
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80

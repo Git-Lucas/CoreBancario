@@ -10,5 +10,20 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql
 
+  # Imagem -management pelo painel em 15672: a topologia (fila quorum, limite de
+  # entregas, dead-letter exchange) é declarada em código, e o painel é como se
+  # confirma que o broker recebeu o que se pretendia declarar.
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: corebancario
+      RABBITMQ_DEFAULT_PASS: corebancario
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
 volumes:
   postgres-data:
+  rabbitmq-data:

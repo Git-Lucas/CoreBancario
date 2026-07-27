@@ -53,6 +53,11 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await using var comando = new NpgsqlCommand("TRUNCATE lancamentos", conexao);
         await comando.ExecuteNonQueryAsync();
     }
+
+    /// <summary>Usado pelo teste de indisponibilidade de banco (9.10).</summary>
+    public Task PararAsync(CancellationToken cancellationToken = default) => _container.StopAsync(cancellationToken);
+
+    public Task IniciarAsync(CancellationToken cancellationToken = default) => _container.StartAsync(cancellationToken);
 }
 
 [CollectionDefinition(nameof(BancoColecaoDeTestes))]

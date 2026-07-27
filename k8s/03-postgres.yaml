@@ -1,0 +1,63 @@
+# StatefulSet mesmo com replicas: 1 — não é redundância, é identidade estável e o PVC seguindo o
+# ordinal automaticamente (D4 em design.md). Ponto de montagem em /var/lib/postgresql, o mesmo do
+# docker-compose.yml: a imagem postgres:18 declara PGDATA=/var/lib/postgresql/18/docker e o
+# volume em /var/lib/postgresql (o pai), não em .../data.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: corebancario
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: corebancario-config
+            - secretRef:
+                name: corebancario-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+# Service sem cabeçalho (clusterIP: None): a descoberta é por DNS de pod, não por endereço fixo
+# (D... em rede-e-exposicao-no-cluster).
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: corebancario
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
