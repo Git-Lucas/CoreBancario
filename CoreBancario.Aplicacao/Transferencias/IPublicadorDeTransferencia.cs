@@ -3,7 +3,9 @@ using CoreBancario.Dominio.Ledger;
 
 namespace CoreBancario.Aplicacao.Transferencias;
 
-/// <summary>O que o solicitante informou (D3/D12 em design.md) — a mensagem não carrega nomes.</summary>
+/// <summary>O que o solicitante informou — a mensagem não carrega nomes de titular, porque nome
+/// não é dado do comando de transferência, é preenchimento do ledger feito pelo Worker ao
+/// liquidar.</summary>
 public sealed record SolicitacaoDeTransferencia(
     LiquidacaoId LiquidacaoId,
     ContaId ContaOrigem,
@@ -18,8 +20,9 @@ public sealed record ResultadoPublicacao(bool Confirmada, string? MotivoDaFalha)
 }
 
 /// <summary>
-/// Port (driven): publicação confirmada pelo broker (D11 em design.md) — o retorno só é
-/// bem-sucedido depois do publisher confirm, nunca em fire-and-forget.
+/// Port (driven): publicação confirmada pelo broker — o retorno só é bem-sucedido depois do
+/// publisher confirm, nunca em fire-and-forget. Sem essa confirmação, o `202` devolvido ao
+/// cliente seria uma promessa que o broker poderia ter aceitado e perdido antes do fsync.
 /// </summary>
 public interface IPublicadorDeTransferencia
 {

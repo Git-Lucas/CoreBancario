@@ -17,7 +17,8 @@ COPY CoreBancario.Dominio/ CoreBancario.Dominio/
 
 RUN dotnet publish CoreBancario.Worker/CoreBancario.Worker.csproj -c Release --no-restore -o /app/publish
 
-# runtime, não aspnet: o Worker não expõe superfície HTTP (D9 em design.md).
+# runtime, não aspnet: o Worker não expõe superfície HTTP, e nenhuma dependência transitiva
+# exige o runtime ASP.NET.
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .

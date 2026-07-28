@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="Npgsql.OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="RabbitMQ.Client.OpenTelemetry" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CoreBancario.Aplicacao\CoreBancario.Aplicacao.csproj" />
     <ProjectReference Include="..\CoreBancario.Infraestrutura\CoreBancario.Infraestrutura.csproj" />
   </ItemGroup>

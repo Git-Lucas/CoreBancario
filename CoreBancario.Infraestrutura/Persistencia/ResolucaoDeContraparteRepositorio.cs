@@ -7,8 +7,10 @@ using NpgsqlTypes;
 namespace CoreBancario.Infraestrutura.Persistencia;
 
 /// <summary>
-/// D10 em design.md: uma única consulta com DISTINCT ON resolve as duas contas de uma vez,
-/// atendida pelo índice `ix_lancamentos_contraparte` sem varredura sequencial.
+/// Uma única consulta com DISTINCT ON resolve as duas contas de uma vez, atendida pelo índice
+/// `ix_lancamentos_contraparte` sem varredura sequencial. Devido à assimetria da partida dobrada
+/// (na linha da conta A, `contraparte_nome` é o nome de B), nenhum outro índice existente serve
+/// essa consulta — nem a chave primária, nem o de extrato, nem o de idempotência.
 /// </summary>
 public sealed class ResolucaoDeContraparteRepositorio(CoreBancarioDbContext contexto) : IResolucaoDeContraparteRepositorio
 {

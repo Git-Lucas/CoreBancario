@@ -4,8 +4,10 @@ using CoreBancario.Dominio.Identidades;
 namespace CoreBancario.Aplicacao.Extrato;
 
 /// <summary>
-/// Cursor opaco simples: Base64Url do id, sem assinatura (D14 em design.md — não há autorização
-/// no escopo do PRD-1, e o período é reaplicado a cada página a partir da requisição, não do cursor).
+/// Cursor opaco simples: Base64Url do id, sem assinatura. Um cursor assinado (HMAC) seria a
+/// resposta de produção quando houver autorização por conta — hoje não há "conta autorizada" da
+/// qual escapar, e o período em si é reaplicado a cada página a partir da requisição, não do
+/// cursor, então adulterar o cursor não amplia o que o cliente já pode pedir.
 /// </summary>
 public static class CursorDeExtrato
 {

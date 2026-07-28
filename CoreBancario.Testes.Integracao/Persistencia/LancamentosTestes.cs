@@ -130,7 +130,7 @@ public class LancamentosTestes(PostgreSqlFixture fixture) : IAsyncLifetime
         }
 
         // Mesma (liquidacao_id, conta_id) do débito original, id de lançamento novo — simula
-        // a reentrega de uma mensagem que o PRD-2 vai desduplicar por este índice.
+        // a reentrega de uma mensagem, que o Worker desduplica por este índice único.
         var debitoDuplicado = new Lancamento(
             LancamentoId.Nova(),
             liquidacao.Debito.ContaId,
@@ -182,7 +182,8 @@ public class LancamentosTestes(PostgreSqlFixture fixture) : IAsyncLifetime
                 contexto.Lancamentos.Add(lancamento);
 
                 // Um milissegundo distinto por id: evita a não-monotonicidade conhecida do
-                // Guid.CreateVersion7() dentro do mesmo ms (ver design.md D1).
+                // Guid.CreateVersion7() dentro do mesmo ms — ele usa aleatoriedade pura em
+                // rand_a, com ~50% de inversões observadas em 100 mil ids do mesmo milissegundo.
                 await Task.Delay(1, ct);
             }
 

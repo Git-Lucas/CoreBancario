@@ -5,8 +5,8 @@ using NpgsqlTypes;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Plano de execução da resolução de nome de contraparte sobre a massa de 1,2M (D10 em design.md).
-/// Pula com motivo explícito quando o banco de desenvolvimento semeado não está disponível.
+/// Plano de execução da resolução de nome de contraparte sobre a massa de 1,2M. Pula com motivo
+/// explícito quando o banco de desenvolvimento semeado não está disponível.
 /// </summary>
 [Collection(nameof(BancoSemeadoColecaoDeTestes))]
 public class PlanoDeExecucaoContraparteTestes(BancoSemeadoFixture fixture)

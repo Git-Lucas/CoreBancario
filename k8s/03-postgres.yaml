@@ -1,7 +1,10 @@
-# StatefulSet mesmo com replicas: 1 — não é redundância, é identidade estável e o PVC seguindo o
-# ordinal automaticamente (D4 em design.md). Ponto de montagem em /var/lib/postgresql, o mesmo do
-# docker-compose.yml: a imagem postgres:18 declara PGDATA=/var/lib/postgresql/18/docker e o
-# volume em /var/lib/postgresql (o pai), não em .../data.
+# StatefulSet mesmo com replicas: 1 — não é redundância, é identidade estável (postgres-0) e o PVC
+# seguindo o ordinal automaticamente. A diferença para um Deployment + PVC avulso aparece na
+# atualização: um Deployment em RollingUpdate pode subir um segundo pod montando o mesmo volume
+# ReadWriteOnce antes de derrubar o primeiro — dois postgres sobre o mesmo diretório de dados é
+# corrupção, não indisponibilidade; o StatefulSet não faz isso por construção. Ponto de montagem em
+# /var/lib/postgresql, o mesmo do docker-compose.yml: a imagem postgres:18 declara
+# PGDATA=/var/lib/postgresql/18/docker e o volume em /var/lib/postgresql (o pai), não em .../data.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -31,13 +34,17 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql
+          # 384Mi medido sob carga real da semeadura (1.200.000 lançamentos, 4 índices), não
+          # estimado: pico de 76 MiB, sem encerramento por memória. Não desce mais — sob este
+          # teto, o cache compartilhado do banco fica em 160 MiB (42% do orçamento), e é ele que
+          # sustenta o index-only scan do extrato, a consulta mais sensível a esse orçamento.
           resources:
             requests:
               cpu: 250m
-              memory: 512Mi
+              memory: 384Mi
             limits:
               cpu: 250m
-              memory: 512Mi
+              memory: 384Mi
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -47,8 +54,7 @@ spec:
           requests:
             storage: 10Gi
 ---
-# Service sem cabeçalho (clusterIP: None): a descoberta é por DNS de pod, não por endereço fixo
-# (D... em rede-e-exposicao-no-cluster).
+# Service sem cabeçalho (clusterIP: None): a descoberta é por DNS de pod, não por endereço fixo.
 apiVersion: v1
 kind: Service
 metadata:

@@ -1,0 +1,20 @@
+# Exceção deliberada ao tratamento das demais credenciais do cluster: aquelas são versionadas
+# porque são as mesmas credenciais de desenvolvimento que o docker-compose.yml já
+# expõe em texto claro. Um token de acesso a um tenant Dynatrace real não compartilha essa
+# propriedade — os valores abaixo são apenas o formato esperado. O valor real é aplicado fora do
+# repositório (`kubectl apply -f -` com o Secret editado localmente, ou `kubectl create secret
+# generic corebancario-observabilidade-externa --save-config --dry-run=client -o yaml | kubectl
+# apply -f -`), nunca commitado.
+#
+# Chaves lidas pelo script de inicialização da imagem grafana/otel-lgtm (run-otelcol.sh): definir
+# OTEL_EXPORTER_OTLP_ENDPOINT (e OTEL_EXPORTER_OTLP_HEADERS com o token) já basta para o fan-out —
+# nenhuma mudança de código nem de configuração da aplicação.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: corebancario-observabilidade-externa
+  namespace: corebancario
+type: Opaque
+stringData:
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Api-Token SUBSTITUA_PELO_TOKEN_REAL"

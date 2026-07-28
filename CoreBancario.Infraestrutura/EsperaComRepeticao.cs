@@ -3,10 +3,11 @@ using Microsoft.Extensions.Logging;
 namespace CoreBancario.Infraestrutura;
 
 /// <summary>
-/// Política de repetição extraída de <see cref="Persistencia.MigracaoInicializacao"/> (D1 em
-/// design.md da change add-k8s-packaging): a mesma espera limitada que o banco já tinha na
-/// inicialização passa a valer para toda dependência externa aberta no startup — hoje, também o
-/// RabbitMQ. Escopo é a primeira conexão; reconexão em regime é responsabilidade do cliente.
+/// Política de repetição extraída de <see cref="Persistencia.MigracaoInicializacao"/>: a mesma
+/// espera limitada que o banco já tinha na inicialização passa a valer para toda dependência
+/// externa aberta no startup — hoje, também o RabbitMQ. Sob Kubernetes não há garantia de ordem
+/// de subida entre workloads, então cada processo precisa aguentar a dependência ainda não estar
+/// de pé sozinho. Escopo é a primeira conexão; reconexão em regime é responsabilidade do cliente.
 /// </summary>
 public static class EsperaComRepeticao
 {

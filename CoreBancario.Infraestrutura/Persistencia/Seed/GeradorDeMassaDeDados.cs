@@ -5,8 +5,12 @@ using Npgsql;
 namespace CoreBancario.Infraestrutura.Persistencia.Seed;
 
 /// <summary>
-/// Ciclo de D12/D11 em design.md: TRUNCATE + remoção dos índices secundários, carga em SQL puro
-/// (sem tráfego de rede para os 1.200.000 lançamentos), recriação dos índices, ANALYZE, VACUUM.
+/// Ciclo: TRUNCATE + remoção dos índices secundários (a PK fica — v7 insere no fim), carga em SQL
+/// puro (uuidv7 do PG gera a massa dentro do banco, sem tráfego de rede para os 1.200.000
+/// lançamentos), recriação dos índices (build ordenado, sem bloat; a criação do índice único
+/// também valida ausência de duplicatas), ANALYZE, VACUUM. As migrations criam o esquema
+/// completo, inclusive os três índices — isso vale para qualquer ambiente; é o comando de seed
+/// que otimiza para si mesmo dropando e recriando.
 /// </summary>
 public static class GeradorDeMassaDeDados
 {
@@ -52,7 +56,11 @@ public static class GeradorDeMassaDeDados
         await ExecutarAsync(conexao, "ANALYZE lancamentos;", cancellationToken);
 
         // VACUUM não pode rodar dentro de bloco de transação: precisa ser o único comando do
-        // seu próprio NpgsqlCommand, sem ser combinado com outras instruções (ver D12).
+        // seu próprio NpgsqlCommand, sem ser combinado com outras instruções. ANALYZE e VACUUM
+        // não são higiene, são pré-condição dos critérios de aceite: sem estatísticas o planner
+        // pode escolher seq scan por enxergar cardinalidade errada, e sem o visibility map
+        // preenchido, qualquer index-only scan passa a visitar o heap — ambos falham
+        // silenciosamente e por motivo que nada tem a ver com o índice em si.
         log.LogInformation("Preenchendo o mapa de visibilidade (VACUUM)...");
         await ExecutarAsync(conexao, "VACUUM lancamentos;", cancellationToken);
 
@@ -66,11 +74,15 @@ public static class GeradorDeMassaDeDados
         await comando.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    // D11 em design.md: hub (2 contas monstro) só liquida contra a cauda longa (500.000
-    // liquidações); a cauda liquida entre si à parte (100.000) — nunca as duas contas monstro
-    // entre elas. A técnica de agrupar por conta_id antes de indexar e parear i com i+N (grupos
-    // de tamanho bem menor que N) garante, por construção geométrica, que nenhuma conta pareia
-    // consigo mesma — sem loop de correção.
+    // Distribuição enviesada para que a demonstração seja significativa: uma distribuição
+    // uniforme daria ~10 lançamentos por conta em 100 mil contas, e "página profunda" deixaria
+    // de existir; concentrar demais faria o planner escolher sequential scan e estar certo.
+    // Hub (2 contas monstro) só liquida contra a cauda longa (500.000 liquidações); a cauda
+    // liquida entre si à parte (100.000) — nunca as duas contas monstro entre elas, senão ~17%
+    // das liquidações cairiam entre as mesmas duas contas, estatisticamente correto mas
+    // narrativamente absurdo. A técnica de agrupar por conta_id antes de indexar e parear i com
+    // i+N (grupos de tamanho bem menor que N) garante, por construção geométrica, que nenhuma
+    // conta pareia consigo mesma — sem loop de correção.
     private const string ScriptDeGeracao =
         """
         DROP TABLE IF EXISTS contas_seed;
@@ -168,9 +180,10 @@ public static class GeradorDeMassaDeDados
         UNION ALL
         SELECT * FROM liquidacoes_cauda_cauda;
 
-        -- O shift é sorteado por liquidação (D11): os dois lançamentos irmãos precisam do mesmo
-        -- milissegundo. liquidacao_id é materializado aqui para não ser recalculado em cada ramo
-        -- do UNION ALL final (cada chamada a uuidv7 produz um Guid diferente).
+        -- O shift é sorteado por liquidação: os dois lançamentos irmãos são o mesmo evento e
+        -- precisam do mesmo milissegundo. liquidacao_id é materializado aqui para não ser
+        -- recalculado em cada ramo do UNION ALL final (cada chamada a uuidv7 produz um Guid
+        -- diferente).
         DROP TABLE IF EXISTS liquidacoes_com_id;
         CREATE TEMP TABLE liquidacoes_com_id AS
         SELECT

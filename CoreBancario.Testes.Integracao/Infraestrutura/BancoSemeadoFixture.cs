@@ -3,10 +3,11 @@ using Npgsql;
 namespace CoreBancario.Testes.Integracao.Infraestrutura;
 
 /// <summary>
-/// Conecta à instância de desenvolvimento semeada com 1,2M lançamentos (D15 em design.md — o
-/// container Testcontainers não semeia esse volume; os testes de plano/custo rodam contra o
-/// banco de desenvolvimento). Se a conexão ou a massa esperada não estiverem disponíveis, os
-/// testes que dependem desta fixture pulam com motivo explícito em vez de falhar.
+/// Conecta à instância de desenvolvimento semeada com 1,2M lançamentos — semear esse volume a
+/// cada execução da suíte inviabilizaria o ciclo de feedback, então o container Testcontainers
+/// não o faz; os testes de plano/custo rodam contra o banco de desenvolvimento. Se a conexão ou a
+/// massa esperada não estiverem disponíveis, os testes que dependem desta fixture pulam com
+/// motivo explícito em vez de falhar.
 /// </summary>
 public sealed class BancoSemeadoFixture : IAsyncLifetime
 {

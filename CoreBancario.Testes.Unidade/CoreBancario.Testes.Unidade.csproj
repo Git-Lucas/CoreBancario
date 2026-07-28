@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CoreBancario.Dominio\CoreBancario.Dominio.csproj" />
     <ProjectReference Include="..\CoreBancario.Aplicacao\CoreBancario.Aplicacao.csproj" />
+    <ProjectReference Include="..\CoreBancario.Worker\CoreBancario.Worker.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,8 +3,9 @@ using RabbitMQ.Client;
 namespace CoreBancario.Infraestrutura.Mensageria;
 
 /// <summary>
-/// Nomes e declaração da topologia (D12 em design.md). Declarada na inicialização de ambos os
-/// processos, de forma idempotente — mesma escolha já feita para as migrations no PRD-1.
+/// Nomes e declaração da topologia. Declarada na inicialização de ambos os processos, de forma
+/// idempotente — mesma escolha já feita para as migrations no startup, pelo mesmo motivo: não
+/// introduzir um passo de deploy separado.
 /// </summary>
 public static class TopologiaDeMensageria
 {

@@ -14,7 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql.OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <PackageReference Include="RabbitMQ.Client" />
+    <PackageReference Include="RabbitMQ.Client.OpenTelemetry" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers.RabbitMq" />
     <PackageReference Include="xunit.v3.mtp-v2" />
@@ -22,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CoreBancario.Infraestrutura\CoreBancario.Infraestrutura.csproj" />
+    <ProjectReference Include="..\CoreBancario.Worker\CoreBancario.Worker.csproj" />
   </ItemGroup>
 
 </Project>

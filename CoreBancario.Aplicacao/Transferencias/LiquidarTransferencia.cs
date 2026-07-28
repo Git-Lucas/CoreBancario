@@ -11,9 +11,11 @@ public enum ResultadoLiquidacao
 }
 
 /// <summary>
-/// Caso de uso consumido pelo Worker ao processar uma mensagem (C2.5, C2.6, C2.11 do PRD-2):
-/// resolve os nomes de titular a partir do ledger, constrói a <see cref="TransferenciaAgregado"/>
-/// e registra o par de lançamentos, absorvendo reentrega como sucesso (D6 em design.md).
+/// Caso de uso consumido pelo Worker ao processar uma mensagem: resolve os nomes de titular a
+/// partir do ledger, constrói a <see cref="TransferenciaAgregado"/> e registra o par de
+/// lançamentos. Reentrega da mensagem é absorvida como sucesso, não como erro — a violação do
+/// índice único de idempotência significa "já liquidada", e tratá-la como falha mandaria uma
+/// transferência corretamente liquidada para o fluxo de retry/DLQ.
 /// </summary>
 public sealed class LiquidarTransferencia(
     IResolucaoDeContraparteRepositorio resolucao,

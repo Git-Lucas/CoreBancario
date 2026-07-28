@@ -1,6 +1,8 @@
-# Mesma forma da Api (replicas: 1 + Recreate, D3 em design.md). Sem sonda: o Worker não tem
-# superfície HTTP, e as duas formas de parar de trabalhar (processo morto, ou queda do broker já
-# coberta pela reconexão automática do cliente) já são visíveis sem uma probe (D9 em design.md).
+# Mesma forma da Api (replicas: 1 + Recreate — evita duas réplicas migrando em paralelo no
+# startup, com Recreate garantindo um processo por vez em vez do RollingUpdate padrão). Sem sonda:
+# o Worker não tem superfície HTTP, e as duas formas de parar de trabalhar (processo morto, que o
+# Kubernetes já vê pelo estado do container, ou queda do broker, já coberta pela reconexão
+# automática do cliente) já são visíveis sem uma probe.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

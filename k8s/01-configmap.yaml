@@ -1,5 +1,5 @@
-# Parâmetros não sensíveis (D5 em design.md da change add-k8s-packaging). O que carrega senha —
-# mesmo embutida numa connection string inteira — vai para o Secret, nunca aqui.
+# Parâmetros não sensíveis. O que carrega senha — mesmo embutida numa connection string inteira —
+# vai para o Secret, nunca aqui.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,3 +11,6 @@ data:
   POSTGRES_DB: "corebancario"
   POSTGRES_USER: "corebancario"
   RABBITMQ_DEFAULT_USER: "corebancario"
+  # Endereço do coletor no cluster — API e Worker conhecem só isto, nunca um backend
+  # específico. Variável padrão do OTel SDK: nenhum código lê este nome.
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-lgtm:4317"

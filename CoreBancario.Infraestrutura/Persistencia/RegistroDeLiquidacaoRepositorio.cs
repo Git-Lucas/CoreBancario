@@ -6,9 +6,9 @@ using Npgsql;
 namespace CoreBancario.Infraestrutura.Persistencia;
 
 /// <summary>
-/// D6 em design.md: a violação do índice único de idempotência (`ux_lancamentos_idempotencia`)
-/// é traduzida em <see cref="ResultadoRegistro.JaRegistrada"/>, nunca propagada como falha — é
-/// o próprio mecanismo de idempotência da liquidação, não um caso de erro do consumidor.
+/// A violação do índice único de idempotência (`ux_lancamentos_idempotencia`) é traduzida em
+/// <see cref="ResultadoRegistro.JaRegistrada"/>, nunca propagada como falha — é o próprio
+/// mecanismo de idempotência da liquidação, não um caso de erro do consumidor.
 /// </summary>
 public sealed class RegistroDeLiquidacaoRepositorio(CoreBancarioDbContext contexto) : IRegistroDeLiquidacaoRepositorio
 {

@@ -3,7 +3,7 @@ using System.Text;
 namespace CoreBancario.Infraestrutura.Mensageria;
 
 /// <summary>
-/// Leitura dos cabeçalhos nativos de reentrega/descarte do RabbitMQ (1.2 em tasks.md):
+/// Leitura dos cabeçalhos nativos de reentrega/descarte do RabbitMQ:
 /// `x-delivery-count` (inteiro) e `x-death` (array de tabelas, com `reason` como long-string).
 /// Tolerante a ausência — a fila de descartes não pode lançar por cabeçalho inesperado.
 /// </summary>

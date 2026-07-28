@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 namespace CoreBancario.Infraestrutura.Persistencia;
 
 /// <summary>
-/// Anti-padrão consciente para projeto de estudo (D13 em design.md): em produção, migração no
-/// startup significa réplicas migrando concorrentemente e indisponibilidade durante migração
-/// longa. O correto seria um passo separado de deploy ou um Job dedicado.
+/// Anti-padrão consciente para projeto de estudo: em produção, migração no startup significa
+/// réplicas migrando concorrentemente e indisponibilidade durante migração longa. O correto
+/// seria um passo separado de deploy ou um Job dedicado.
 /// </summary>
 public static class MigracaoInicializacao
 {

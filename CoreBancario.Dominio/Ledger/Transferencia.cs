@@ -3,7 +3,7 @@ using CoreBancario.Dominio.Identidades;
 namespace CoreBancario.Dominio.Ledger;
 
 /// <summary>
-/// Comando de transferência validado (PRD-2 C2.9): existe para impedir, no domínio, a construção
+/// Comando de transferência validado: existe para impedir, no domínio, a construção
 /// de uma transferência desbalanceada ou multi-moeda, antes de o Worker conhecer o
 /// <see cref="LiquidacaoId"/> e os nomes de titular necessários para produzir a <see cref="Ledger.Liquidacao"/>.
 /// </summary>
@@ -43,8 +43,8 @@ public sealed class Transferencia
     }
 
     /// <summary>
-    /// Produz o par de lançamentos via a <see cref="Ledger.Liquidacao"/> já existente (D3 em
-    /// design.md), uma vez conhecidos o identificador da liquidação e os nomes resolvidos.
+    /// Produz o par de lançamentos via a <see cref="Ledger.Liquidacao"/> já existente, uma vez
+    /// conhecidos o identificador da liquidação e os nomes resolvidos.
     /// </summary>
     public Liquidacao Liquidar(LiquidacaoId id, string nomeContaOrigem, string nomeContaDestino) =>
         Liquidacao.Registrar(

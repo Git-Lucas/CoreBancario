@@ -5,9 +5,9 @@ using NpgsqlTypes;
 namespace CoreBancario.Testes.Integracao.Persistencia;
 
 /// <summary>
-/// Testes de plano de execução e custo de acesso sobre a massa de 1,2M (D15 em design.md).
-/// Pulam com motivo explícito quando o banco de desenvolvimento semeado não está disponível —
-/// não é o Testcontainers narrow que sustenta esse volume.
+/// Testes de plano de execução e custo de acesso sobre a massa de 1,2M. Pulam com motivo
+/// explícito quando o banco de desenvolvimento semeado não está disponível — não é o
+/// Testcontainers narrow que sustenta esse volume.
 /// </summary>
 [Collection(nameof(BancoSemeadoColecaoDeTestes))]
 public class PlanoDeExecucaoExtratoTestes(BancoSemeadoFixture fixture)
@@ -116,8 +116,9 @@ public class PlanoDeExecucaoExtratoTestes(BancoSemeadoFixture fixture)
         var pagina5000 = await ExplainAnalyzeApoio.ExecutarAsync(
             conexao, SqlKeyset, ParametrosKeyset(fixture.ContaMonstro, PisoMinimo, cursorPagina5000), ct);
 
-        // Limiar absoluto, não percentual (D10/PRD-1 calibrados): os valores de keyset são
-        // pequenos demais (~5 buffers) para um percentual não virar teste instável.
+        // Limiar absoluto, não percentual: os valores de keyset são pequenos demais (~5 buffers)
+        // para um percentual não virar teste instável — calibrado sobre a medição real da massa
+        // de 1,2M, com folga confortável.
         Assert.True(
             pagina5000.Buffers <= pagina1.Buffers + 10,
             $"página 5000 leu {pagina5000.Buffers} buffers, página 1 leu {pagina1.Buffers}");
