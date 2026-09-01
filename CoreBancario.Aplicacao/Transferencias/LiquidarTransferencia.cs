@@ -1,6 +1,5 @@
 using CoreBancario.Dominio.Ledger;
 using Microsoft.Extensions.Logging;
-using TransferenciaAgregado = CoreBancario.Dominio.Ledger.Transferencia;
 
 namespace CoreBancario.Aplicacao.Transferencias;
 
@@ -12,10 +11,10 @@ public enum ResultadoLiquidacao
 
 /// <summary>
 /// Caso de uso consumido pelo Worker ao processar uma mensagem: resolve os nomes de titular a
-/// partir do ledger, constrói a <see cref="TransferenciaAgregado"/> e registra o par de
-/// lançamentos. Reentrega da mensagem é absorvida como sucesso, não como erro — a violação do
-/// índice único de idempotência significa "já liquidada", e tratá-la como falha mandaria uma
-/// transferência corretamente liquidada para o fluxo de retry/DLQ.
+/// partir do ledger e registra o par de lançamentos via <see cref="Liquidacao.Registrar"/>.
+/// Reentrega da mensagem é absorvida como sucesso, não como erro — a violação do índice único
+/// de idempotência significa "já liquidada", e tratá-la como falha mandaria uma transferência
+/// corretamente liquidada para o fluxo de retry/DLQ.
 /// </summary>
 public sealed class LiquidarTransferencia(
     IResolucaoDeContraparteRepositorio resolucao,
@@ -33,13 +32,14 @@ public sealed class LiquidarTransferencia(
         var nomeOrigem = ResolverNome(nomes, solicitacao.ContaOrigem);
         var nomeDestino = ResolverNome(nomes, solicitacao.ContaDestino);
 
-        var transferencia = TransferenciaAgregado.Solicitar(
-            solicitacao.ContaOrigem,
-            solicitacao.ContaDestino,
+        var liquidacao = Liquidacao.Registrar(
+            solicitacao.LiquidacaoId,
+            contaDebito: solicitacao.ContaOrigem,
+            nomeContaDebito: nomeOrigem,
+            contaCredito: solicitacao.ContaDestino,
+            nomeContaCredito: nomeDestino,
             valorDebito: new Dinheiro(-solicitacao.Valor.Valor, solicitacao.Valor.Moeda),
             valorCredito: solicitacao.Valor);
-
-        var liquidacao = transferencia.Liquidar(solicitacao.LiquidacaoId, nomeOrigem, nomeDestino);
 
         var resultadoRegistro = await registro.RegistrarAsync(liquidacao, cancellationToken);
 
