@@ -28,6 +28,27 @@ public class LiquidacaoTestes
     }
 
     [Fact]
+    public void Registrar_AtribuiContaEContraparteCorretamenteEmCadaLancamento()
+    {
+        var contaA = ContaId.Nova();
+        var contaB = ContaId.Nova();
+
+        var liquidacao = Liquidacao.Registrar(
+            LiquidacaoId.Nova(),
+            contaDebito: contaA,
+            nomeContaDebito: "Fulano",
+            contaCredito: contaB,
+            nomeContaCredito: "Beltrano",
+            valorDebito: new Dinheiro(-100m, Moeda.BRL),
+            valorCredito: new Dinheiro(100m, Moeda.BRL));
+
+        Assert.Equal(contaA, liquidacao.Debito.ContaId);
+        Assert.Equal("Beltrano", liquidacao.Debito.ContraparteNome);
+        Assert.Equal(contaB, liquidacao.Credito.ContaId);
+        Assert.Equal("Fulano", liquidacao.Credito.ContraparteNome);
+    }
+
+    [Fact]
     public void Registrar_ComValoresAbsolutosDiferentes_Lanca()
     {
         var contaA = ContaId.Nova();

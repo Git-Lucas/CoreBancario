@@ -1,5 +1,33 @@
 # CoreBancario
 
+## O que é este projeto
+
+Projeto de estudo — uma fatia de um core bancário, construída para preparação de arguição técnica sênior em .NET. Não é (nem tenta ser) um sistema de produção: cobre em profundidade os quatro problemas escolhidos como foco — persistência de alto volume, mensageria confiável, orquestração em Kubernetes e observabilidade — e deixa outros deliberadamente de fora (cadastro de contas, saldo, autenticação, multi-moeda, entre outros) para caber no prazo sem virar superficial em tudo. Arquitetura Clean/Hexagonal/DDD sobre um único bounded context, em camadas por projeto: `CoreBancario.Dominio` (entidades e ValueObjects, sem dependência de framework), `CoreBancario.Aplicacao` (casos de uso e ports), `CoreBancario.Infraestrutura` (adapters — EF Core/Npgsql, RabbitMQ.Client) e os hosts `CoreBancario.Api`/`CoreBancario.Worker`.
+
+### Ledger e extrato performático
+
+**Problema:** um sistema financeiro registra movimentações como histórico imutável — partida dobrada, todo lançamento tem um débito e um crédito pareados que somam zero — e consultar o extrato de uma conta sobre milhões de linhas, sem os cuidados corretos de indexação e paginação, degrada rapidamente.
+
+**Solução:** tabela única `lancamentos`, append-only — trigger no banco rejeita `UPDATE`/`DELETE`, e o domínio não expõe mutação. A identidade é `Guid` v7 gerada em .NET (nunca pelo banco), o que embute o timestamp no próprio identificador; isso sustenta paginação por keyset (nunca `OFFSET`) e a tradução do filtro de período em `Index Cond` de índice, não `Filter` residual. Um índice de cobertura (`INCLUDE`) sobre `(conta_id, id DESC)` viabiliza `Index Only Scan` sem tocar o heap, e a leitura é projetada direto para DTO, sem tracking. O modelo é desnormalizado — a contraparte é gravada na própria linha — porque não existe tabela de contas: decisão de escopo consciente, não descuido.
+
+### Transferência assíncrona
+
+**Problema:** núcleos de pagamento não liquidam de forma síncrona no request HTTP — a API registra a intenção e responde rápido enquanto a liquidação ocorre desacoplada, o que introduz os problemas reais de mensageria: entrega duplicada (at-least-once), perda em restart, mensagens venenosas.
+
+**Solução:** a API valida estruturalmente, publica no RabbitMQ com publisher confirms — só responde `202` depois do confirm do broker — e não toca o PostgreSQL no caminho da transferência: dual write não é mitigado, é eliminado, porque existe um único write. O `liquidacaoId` (`Guid` v7) nasce na API antes da publicação e viaja como correlation id, chave de idempotência e identificador devolvido ao cliente. O Worker consome e liquida; idempotência é garantida por constraint única de banco (`liquidacao_id, conta_id`) — uma reentrega vira `ack`, nunca erro. Falhas repetidas (fila quorum, `x-delivery-limit=3`) desviam para uma DLQ, drenada por um consumidor dedicado que loga `liquidacaoId`, tentativas, motivo e corpo bruto — a única forma de observar uma transferência morta, já que não há endpoint de status.
+
+### Empacotamento em Kubernetes
+
+**Problema:** o sistema tem processos de naturezas distintas — serviços sem estado (API, Worker) e serviços com estado (broker, banco) — e orquestrá-los corretamente, sabendo justificar cada escolha, é fundamento cobrado de um sênior.
+
+**Solução:** API e Worker como `Deployment`; PostgreSQL e RabbitMQ como `StatefulSet` com `PersistentVolumeClaim` (dados sobrevivem à recriação do pod); configuração não sensível em `ConfigMap`, credenciais em `Secret`; comunicação interna por `Service`/DNS do cluster; entrada externa via `Ingress`. Os manifestos são desenhados para portabilidade entre kind (desenvolvimento local) e GKE, sem nenhum campo que precise mudar entre os dois.
+
+### Observabilidade
+
+**Problema:** um fluxo assíncrono e distribuído é difícil de depurar — uma transferência atravessa processos e um broker, e sem correlação não dá para saber onde falhou ou o que demorou.
+
+**Solução:** instrumentação OpenTelemetry em API e Worker, com o contexto de trace propagado através da própria mensagem no broker — uma transferência produz um único trace, com o span do Worker encadeado como filho do span da API, cobrindo recebimento, publicação, consumo e escrita no banco. Métricas RED (taxa, erro, duração) das operações principais, mais profundidade da fila. Backend gratuito in-cluster (Grafana + Prometheus + Tempo, empacotados numa única imagem), com exportação adicional — não substitutiva — para um backend OTLP externo, ativável sem reinstrumentar o código.
+
 ## Configuração
 
 A conexão com o PostgreSQL é lida de `ConnectionStrings:CoreBancario` (`appsettings.Development.json`, carregado por `dotnet run`), com o valor de desenvolvimento apontando para `localhost:5432`. Para sobrescrever — por exemplo em outro ambiente — defina a variável de ambiente `ConnectionStrings__CoreBancario`. O `appsettings.json` base, que vai para a imagem de container publicada, não traz connection string nenhuma — em produção (e no cluster) o valor vem sempre de variável de ambiente.
@@ -108,7 +136,11 @@ kind delete cluster --name corebancario
 
 ### Observabilidade
 
-O `kubectl apply -f k8s/` do passo 3 já sobe o backend de observabilidade junto com o resto — nenhum passo separado. API e Worker exportam traces e métricas por OTLP para ele; se o workload estiver ausente ou indisponível, os dois continuam operando normalmente (a exportação apenas falha em silêncio).
+Manifesto separado em `k8s/opcional/`, fora do `kubectl apply -f k8s/` do passo 3 — o backend (imagem `grafana/otel-lgtm`) sozinho pede 640Mi de memória, caro demais para reservar por padrão num cluster kind rodando num host com pouca folga (ex.: WSL2 com poucos GiB). API e Worker exportam traces e métricas por OTLP independentemente de o workload estar de pé; se estiver ausente ou indisponível, os dois continuam operando normalmente (a exportação apenas falha em silêncio) — por isso subir observabilidade é opt-in, não pré-requisito:
+
+```
+kubectl apply -f k8s/opcional/
+```
 
 Alcançar o painel (a imagem baixa e instala plugins na primeira subida — a primeira vez pode levar alguns minutos; as seguintes são rápidas):
 
